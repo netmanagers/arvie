@@ -1,0 +1,3 @@
+[submodule "arvados"]
+	path = arvados
+	url = https://github.com/arvados/arvados.git

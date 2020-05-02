@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:experimental
+# https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/
+# CHECK!!!!
+# https://github.com/medicharlachiranjeevi/phusion-passenger-docker-rails/blob/master/Dockerfile
+
+# https://blog.carbonfive.com/2015/03/17/docker-rails-docker-compose-together-in-your-development-workflow/
+
+FROM ruby:2.5.8-slim-buster AS builder
+# GEMS
+# https://bundler.io/v2.0/guides/bundler_docker_guide.html
+ARG GEM_HOME="/usr/local/bundle"
+# build dir in the container
+ARG LOCAL_ARVADOS_SRC="/usr/src/arvados"
+# $APP_NAME source code subdir
+ARG APP_NAME
+ARG APP_DIR
+ARG APP_SUBDIR=${APP_DIR}/${APP_NAME}
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV BUNDLE_PATH $GEM_HOME
+ENV PATH $BUNDLE_PATH/bin:$PATH
+ENV PORT $PORT
+
+# Avoid unnecessary files when installing packages
+COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+COPY configs/build/gemrc /root/.gemrc
+
+WORKDIR /tmp
+
+COPY ./arvados/${APP_SUBDIR}/Gemfile* ./
+
+# copy the arvados code
+COPY ./arvados ${LOCAL_ARVADOS_SRC}/
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get install --yes \
+                    --no-install-recommends \
+                    curl \
+                    g++ \
+                    gcc \
+                    git \
+                    libcurl4 \
+                    libcurl4-gnutls-dev \
+                    libpq-dev \
+                    libxml2 \
+                    libxml2-dev \
+                    make \
+                    postgresql-client \
+                    python-dev \
+                    zlib1g-dev
+
+# The retry is because of errors caused by rubygems site
+# https://github.com/rubygems/rubygems-infrastructure/blob/7b2bedec0d5b08f02d6b3bcde162304f10c0daa3/cookbooks/rubygems-balancer/templates/default/site.conf.erb#L13-L15
+RUN --mount=type=cache,target=/usr/local/bundle/cache \
+    bundle install --retry=10 || \
+    bundle install --retry=10
+
+WORKDIR ${LOCAL_ARVADOS_SRC}/${APP_SUBDIR}
+
+# We use this to get the config :|
+COPY --from=arvados/server:latest /app/arvados-server /usr/local/bin
+
+EXPOSE ${PORT}
+CMD ["rails", "server", "-b", "0.0.0.0"]
