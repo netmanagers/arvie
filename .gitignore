@@ -32,3 +32,4 @@ services/api/config/arvados-clients.yml
 .Rproj.user
 _version.py
 *.bak
+configs/ssl

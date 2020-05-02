@@ -19,7 +19,7 @@ them in place.
 
 Afaik, docker-compose-alike and buildkit behaviours have been incorporated in
 the latest docker binaries (ie, plugin *buildx* can replace BuildKit), but haven't
-tested them yet. To be done :)
+tested them yet. To be done :smile:
 
 Why?
 ----

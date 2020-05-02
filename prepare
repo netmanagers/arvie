@@ -7,6 +7,7 @@
 set -euo pipefail
 
 echo "Generating the Postgresql SSL cert"
+mkdir -p configs/ssl
 openssl req -new -text -passout pass:abcd -subj /CN=localhost -out configs/ssl/server.req -keyout configs/ssl/privkey.pem
 openssl rsa -in configs/ssl/privkey.pem -passin pass:abcd -out configs/ssl/server.key
 openssl req -x509 -in configs/ssl/server.req -text -key configs/ssl/server.key -out configs/ssl/server.crt
@@ -14,6 +15,5 @@ chmod 600 configs/ssl/server.key
 test $(uname -s) == Linux && sudo chown 70 configs/ssl/server.key
 
 echo "Downloading Arvados"
-mkdir -p arvados
 git submodule update --init
 git submodule update --checkout
