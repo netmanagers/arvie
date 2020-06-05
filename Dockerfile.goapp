@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:experimental
 # https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/
 ### BUILDER
-FROM golang:1.13.6-buster AS builder
+FROM golang:buster AS builder
 
 ARG APP_NAME
 ARG APP_DIR

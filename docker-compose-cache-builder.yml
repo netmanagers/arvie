@@ -1,0 +1,35 @@
+# This file is a cache builder helper.
+# You can use it before building images, to get a cache of npm, gems, pip or
+# go packages/modules and to overcame the fact that docker can't mount
+# volumes at build time.
+
+# Using this cache will also improve the speed api/workbench/workbench2 takes to start,
+# as they might they require gems and npm packages updated when they start
+version: '3'
+
+services:
+  ### NPM
+  npm-cache:
+    container_name: npm-cache
+    image: ${NODE_IMAGE}
+    volumes:
+      - ${HOST_NPMCACHE}:/cache/npm
+    command: /bin/true
+  ### RUBY
+  gem-cache:
+    container_name: gem-cache
+    image: ${RUBY_IMAGE}
+    volumes:
+      - ${PWD}/configs/build/dpkg-nodoc:/etc/dpkg/dpkg.cfg.d/01_nodoc
+      - ${PWD}/configs/build/gemrc:/root/.gemrc
+
+      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - ${PWD}/${ETC_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
+      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
+      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
+      - ${ARVADOS_ROOT}:/usr/src/arvados
+      - ${PWD}/scripts:/scripts
+    environment:
+      NPM_CONFIG_PREFIX: ${HOST_NPMCACHE}
+      npm_config_cache_min: ${NPM_CACHE_MIN}
+    command: /scripts/ruby/build_gems_cache

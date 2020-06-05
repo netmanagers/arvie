@@ -17,22 +17,22 @@ version: '3'
 services:
   ### DATABASE
   database:
-    hostname: db.${DOMAIN}
-    image: "postgres:11-alpine"
+    container_name: database
+    image: 'postgres:11-alpine'
     restart: always
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - ${PG_DATA}:/var/lib/postgresql/data
       - ${PWD}/scripts/postgresql:/docker-entrypoint-initdb.d
       - ${PWD}/configs/ssl/server.crt:/var/lib/postgresql/server.crt:ro
       - ${PWD}/configs/ssl/server.key:/var/lib/postgresql/server.key:ro
-    command: "postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key"
+    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
     environment:
       POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD}
   ### CONTROLLER
   controller:
-    hostname: controller.${DOMAIN}
+    container_name: controller
     image: arvados/server
     ports:
       - 8003:8003
@@ -40,19 +40,21 @@ services:
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
     command: controller
+    depends_on:
+      - database
   ### WEBSOCKETS
-  websocket:
-    hostname: ws.${DOMAIN}
-    image: arvados/server
-    ports:
-      - 8005:8005
-    restart: always
-    volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-    command: ws
+  # websocket:
+  #   container_name: websocket
+  #   image: arvados/server
+  #   ports:
+  #     - 8005:8005
+  #   restart: always
+  #   volumes:
+  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  #   command: ws
   ### API
   api:
-    hostname: api.${DOMAIN}
+    container_name: api
     image: arvados/api
     command: /scripts/ruby/app_start 8004
     tty: true # Enables debugging capabilities when attached to this container.
@@ -62,40 +64,62 @@ services:
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
       - ${PWD}/${ETC_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
-      - ${PWD}/scripts:/scripts
-      # The gems cache
-      # - ${GEMCACHE}:/gems
+      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
+      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
       - ${ARVADOS_ROOT}:/usr/src/arvados
       - ${ARVBOX_FLAGS}:/arvados/flags
+      - ${PWD}/scripts:/scripts
+    environment:
+      NPM_CONFIG_PREFIX: ${HOST_NPMCACHE}
+      npm_config_cache_min: ${NPM_CACHE_MIN}
     links:
       - database
     depends_on:
       - database
+      - controller
   nginx:
+    container_name: nginx
     image: nginx:stable-alpine
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "4443:443"
     volumes:
       - ${PWD}/${ETC_NGINX}:/etc/nginx/conf.d
+      - ${PWD}/configs/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - controller
+      - api
+      - workbench
+      - keep
   ### WORKBENCH
   workbench:
-    hostname: workbench.${DOMAIN}
+    container_name: workbench
     image: arvados/workbench
-    command: /scripts/ruby/app_start 9002
+    command: /scripts/ruby/app_start 9000
     tty: true # Enables debugging capabilities when attached to this container.
     ports:
-      - 9002:9002
+      - 9000:9000
     restart: always
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
       - ${PWD}/${ETC_ARVADOS}/arvados-workbench-application.yml:/etc/arvados/application.yml
+      # FIXME! This needs to be really used
+      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
+      - ${PWD}/${HOST_PIPCACHE}:/cache.pip
+      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
       - ${ARVADOS_ROOT}:/usr/src/arvados
       - ${ARVBOX_FLAGS}:/arvados/flags
       - ${PWD}/scripts:/scripts
+    environment:
+      npm_config_cache: ${NPM_CACHE}
+      npm_config_cache_min: ${NPM_CACHE_MIN}
+    depends_on:
+      - controller
+      - api
   ### GIT-HTTPD
   git-httpd:
+    container_name: git-httpd
     image: arvados/git-httpd
     ports:
       - 9001:9001
@@ -103,7 +127,7 @@ services:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   crunch-dispatch-local:
     # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
-
+    # TL;RL: no, it's not. you better run siblings
     image: arvados/crunch-dispatch-local
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
@@ -115,28 +139,31 @@ services:
   # dockercleaner:
   # fuse:
   health:
+    container_name: health
     image: arvados/health
     volumes:
       - ${PWD}/${ARVADOS_ROOT}:/usr/src/arvados
   keep-balance:
+    container_name: keep-balance
     image: arvados/keep-balance
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-  keepproxy:
-    hostname: keep.${DOMAIN}
+  keep:
+    container_name: keep
     image: arvados/keepproxy
     ports:
       - 25100:25100
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   keep-web:
+    container_name: keep-web
     image: arvados/keep-web
     ports:
       - 9003:9003
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   keep0:
-    hostname: keep0.${DOMAIN}
+    container_name: keep0
     image: arvados/keepstore
     ports:
       - 25107:25107
@@ -144,7 +171,7 @@ services:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
       - ${KEEP0_DATA}:/var/lib/arvados/keep0
   keep1:
-    hostname: keep1.${DOMAIN}
+    container_name: keep1
     image: arvados/keepstore
     ports:
       - 25108:25108

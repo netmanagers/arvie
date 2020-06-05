@@ -7,48 +7,43 @@ Clusters:
     Services:
       RailsAPI:
         InternalURLs:
-          "http://localhost:8004": {}
+          "http://api:8004": {}
       Workbench1:
-        ExternalURL: "https://workbench:443"
+        ExternalURL: "https://workbench:9000"
       Workbench2:
-        ExternalURL: "https://workbench2:3002"
+        ExternalURL: "https://workbench2:9000"
       Keepproxy:
-        ExternalURL: "https://keep:25101"
         InternalURLs:
           "http://keep:25100": {}
+        ExternalURL: "https://localhost:25101"
       Keepstore:
         InternalURLs:
           "http://keep0:25107": {}
           "http://keep1:25108": {}
       Websocket:
-        ExternalURL: "wss://ws:8002/websocket"
         InternalURLs:
-          "http://ws:8005": {}
+          "http://websocket:8005": {}
+        ExternalURL: "wss://localhost:8002/websocket"
       GitSSH:
-        ExternalURL: "ssh://git@127.0.0.1:"
+        ExternalURL: "ssh://git@localhost:"
       GitHTTP:
         InternalURLs:
-          "http://localhost:9001/": {}
-        ExternalURL: "https://127.0.0.1:9000/"
+          "http://git:9001/": {}
+        ExternalURL: "https://localhost:9001/"
       WebDAV:
         InternalURLs:
-          "http://localhost:9003/": {}
-        ExternalURL: "https://127.0.0.1:9002/"
+          "http://keep-web:9002/": {}
+        ExternalURL: "https://localhost:9002/"
       WebDAVDownload:
         InternalURLs:
-          "http://localhost:9003/": {}
-        ExternalURL: "https://127.0.0.1:9002/"
-        InternalURLs:
-          "http://localhost:9003/": {}
+          "http://keep-web:9002/": {}
+        ExternalURL: "https://localhost:9002/"
       Composer:
-        ExternalURL: "https://127.0.0.1:4200"
+        ExternalURL: "https://localhost:4200"
       Controller:
-        ExternalURL: "https://127.0.0.1:8000"
         InternalURLs:
-          "http://localhost:8003": {}
-      RailsAPI:
-        InternalURLs:
-          "http://localhost:8004/": {}
+          "http://controller:8003": {}
+        ExternalURL: "http://localhost:8003"
     PostgreSQL:
       ConnectionPool: 32 # max concurrent connections per arvados server daemon
       Connection:
@@ -66,8 +61,14 @@ Clusters:
       DefaultReplication: 1
       TrustAllContent: true
     Login:
-      ProviderAppSecret: sso_app_secret
-      ProviderAppID: arvados-server
+      PAM:
+        # (Experimental) Use PAM to authenticate users.
+        Enable: true
+
+        # PAM service name. PAM will apply the policy in the
+        # corresponding config file (e.g., /etc/pam.d/arvados) or, if
+        # there is none, the default "other" config.
+        # Service: arvados
     Users:
       NewUsersAreActive: true
       AutoAdminFirstUser: true
@@ -76,7 +77,7 @@ Clusters:
       AutoSetupNewUsersWithRepository: true
     Workbench:
       SecretKeyBase: workbench_secret_key_base
-      ArvadosDocsite: http://127.0.0.1:8001/
+      ArvadosDocsite: http://localhost:8001/
     Git:
       GitCommand: /usr/share/gitolite3/gitolite-shell
       GitoliteHome: /var/lib/arvados/git

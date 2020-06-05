@@ -48,7 +48,7 @@ The default subdir is *arvados*.
 
 .. code-block:: bash
 
-   $ git clone ssh://gitolite3@netmanagers.com.ar/arvados-compose.git
+   $ git clone https://github.com/netmanagers/arvie.git
 
 2. Run the `prepare` script, to get Arvados' subtree and generate a pair of SSL keys for postgres.
    (As postgres needs the keys with certain permissions and ownership, the script will ask you for

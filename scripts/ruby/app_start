@@ -3,6 +3,9 @@
 
 PORT=$1
 
+export GEM_HOME=/cache/gems
+export NPM_CONFIG_PREFIX=/cache/npm
+
 echo "Run bundle install if required"
 bundle check || bundle install
 
@@ -15,4 +18,10 @@ fi
 
 echo "Run migrations to update/upgrade the database structure"
 bundle exec rake db:migrate
+
+# Tried to add this to the Dockerfile, but the npm assets need the /etc/arvados/config.yml file in place
+echo "Building and precompiling assets"
+RAILS_GROUPS=assets bundle exec rake npm:install && \
+  bundle exec rake assets:precompile
+
 bundle exec rails server -b 0.0.0.0 -p ${PORT}

@@ -8,7 +8,7 @@ production:
   database: arvados
   username: arvados
   password: arvados
-  host: db.local
+  host: database
   template: template0
 
 development:
@@ -17,7 +17,7 @@ development:
   database: arvados
   username: arvados
   password: arvados
-  host: db.local
+  host: database
   template: template0
 
 # Warning: The database defined as "test" will be erased and
@@ -29,5 +29,5 @@ test:
   database: arvados
   username: arvados
   password: arvados
-  host: db.local
+  host: database
   template: template0

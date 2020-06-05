@@ -5,7 +5,7 @@ version: '3'
 
 services:
   ### ARVADOS-SERVER
-  arvados_server:
+  arvados-server:
     image: arvados/server
     build:
       context: .
@@ -14,7 +14,7 @@ services:
         APP_DIR: cmd
         APP_NAME: arvados-server
   ### ARVADOS-CLIENT
-  arvados_client:
+  arvados-client:
     image: arvados/client
     build:
       context: .
@@ -33,6 +33,9 @@ services:
         APP_DIR: services
         APP_NAME: api
         PORT: 8004
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip
   ### WORKBENCH
   workbench:
     image: arvados/workbench
@@ -42,8 +45,10 @@ services:
       args:
         APP_DIR: apps
         APP_NAME: workbench
-        GEM_HOME: /gems
         PORT: 9002
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip
   ### GIT-HTTPD
   git-httpd:
     image: arvados/git-httpd
@@ -59,7 +64,7 @@ services:
     image: arvados/crunch-dispatch-local
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: Dockerfile.goapp.crunch-dispatch-local
       args:
         APP_DIR: services
         APP_NAME: crunch-dispatch-local
