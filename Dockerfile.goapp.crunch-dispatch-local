@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:experimental
+# https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/
+### BUILDER
+FROM golang:1.13.6-buster AS builder
+
+ARG APP_NAME
+ARG APP_DIR
+
+ENV DEBIAN_FRONTEND noninteractive
+
+COPY ./arvados /usr/src/arvados/git.arvados.org/arvados.git/
+
+# https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/experimental.md
+# RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get install --yes --no-install-recommends \
+            git \
+            libfuse-dev \
+            libpam0g-dev
+
+WORKDIR /usr/src/arvados/git.arvados.org/arvados.git
+
+RUN --mount=type=cache,target=/root/.cache/go-build,id=cache-go \
+    go mod download
+
+RUN --mount=type=cache,target=/root/.cache/go-build,id=cache-go \
+    GOOS=linux \
+    go install -a -installsuffix cgo ./$APP_DIR/$APP_NAME
+
+#FINAL IMAGE
+FROM debian:buster-slim AS final
+
+ARG APP_NAME
+# Avoid unnecessary files when installing packages
+COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get install --yes --no-install-recommends \
+            libfuse2
+
+WORKDIR /app/
+COPY --from=builder /go/bin/$APP_NAME .
+# These other deps are specific to crunch-dispatch-local, as seen in
+# arvados/tools/arvbox/lib/arvbox/docker/service/crunch-dispatch-local/run-service
+COPY ./scripts/arvados/crunch-run.sh /usr/local/bin/
+COPY --from=arvados/server /app/arvados-server /usr/local/bin/crunch-run
+# Damn - https://github.com/moby/moby/issues/18492#issuecomment-347364597
+RUN ln -s ./$APP_NAME executable
+ENTRYPOINT ["./executable"]
