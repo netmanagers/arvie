@@ -33,7 +33,7 @@ services:
   ### CONTROLLER
   controller:
     container_name: controller
-    image: arvados/server
+    image: nmarvie/server
     ports:
       - 8003:8003
     restart: always
@@ -45,7 +45,7 @@ services:
   ### WEBSOCKETS
   # websocket:
   #   container_name: websocket
-  #   image: arvados/server
+  #   image: nmarvie/server
   #   ports:
   #     - 8005:8005
   #   restart: always
@@ -55,7 +55,7 @@ services:
   ### API
   api:
     container_name: api
-    image: arvados/api
+    image: nmarvie/api
     command: /scripts/ruby/app_start 8004
     tty: true # Enables debugging capabilities when attached to this container.
     ports:
@@ -95,7 +95,7 @@ services:
   ### WORKBENCH
   workbench:
     container_name: workbench
-    image: arvados/workbench
+    image: nmarvie/workbench
     command: /scripts/ruby/app_start 9000
     tty: true # Enables debugging capabilities when attached to this container.
     ports:
@@ -120,7 +120,7 @@ services:
   ### GIT-HTTPD
   git-httpd:
     container_name: git-httpd
-    image: arvados/git-httpd
+    image: nmarvie/git-httpd
     ports:
       - 9001:9001
     volumes:
@@ -128,7 +128,7 @@ services:
   crunch-dispatch-local:
     # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
     # TL;RL: no, it's not. you better run siblings
-    image: arvados/crunch-dispatch-local
+    image: nmarvie/crunch-dispatch-local
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
@@ -140,31 +140,31 @@ services:
   # fuse:
   health:
     container_name: health
-    image: arvados/health
+    image: nmarvie/health
     volumes:
       - ${PWD}/${ARVADOS_ROOT}:/usr/src/arvados
   keep-balance:
     container_name: keep-balance
-    image: arvados/keep-balance
+    image: nmarvie/keep-balance
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   keep:
     container_name: keep
-    image: arvados/keepproxy
+    image: nmarvie/keepproxy
     ports:
       - 25100:25100
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   keep-web:
     container_name: keep-web
-    image: arvados/keep-web
+    image: nmarvie/keep-web
     ports:
       - 9003:9003
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   keep0:
     container_name: keep0
-    image: arvados/keepstore
+    image: nmarvie/keepstore
     ports:
       - 25107:25107
     volumes:
@@ -172,7 +172,7 @@ services:
       - ${KEEP0_DATA}:/var/lib/arvados/keep0
   keep1:
     container_name: keep1
-    image: arvados/keepstore
+    image: nmarvie/keepstore
     ports:
       - 25108:25108
     volumes:

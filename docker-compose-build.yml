@@ -6,7 +6,7 @@ version: '3'
 services:
   ### ARVADOS-SERVER
   arvados-server:
-    image: arvados/server
+    image: nmarvie/server
     build:
       context: .
       dockerfile: Dockerfile.goapp
@@ -15,7 +15,7 @@ services:
         APP_NAME: arvados-server
   ### ARVADOS-CLIENT
   arvados-client:
-    image: arvados/client
+    image: nmarvie/client
     build:
       context: .
       dockerfile: Dockerfile.goapp
@@ -25,7 +25,7 @@ services:
   ### API
   # The API image can be build and run standalone as a rails app, 
   api:
-    image: arvados/api
+    image: nmarvie/api
     build:
       context: .
       dockerfile: Dockerfile.rails
@@ -38,7 +38,7 @@ services:
         PIPCACHE: /cache/pip
   ### WORKBENCH
   workbench:
-    image: arvados/workbench
+    image: nmarvie/workbench
     build:
       context: .
       dockerfile: Dockerfile.rails
@@ -51,7 +51,7 @@ services:
         PIPCACHE: /cache/pip
   ### GIT-HTTPD
   git-httpd:
-    image: arvados/git-httpd
+    image: nmarvie/git-httpd
     build:
       context: .
       dockerfile: Dockerfile.goapp
@@ -61,7 +61,7 @@ services:
   crunch-dispatch-local:
     # FIXME! Not sure if it needs a whole dockerd or a docker client
     # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
-    image: arvados/crunch-dispatch-local
+    image: nmarvie/crunch-dispatch-local
     build:
       context: .
       dockerfile: Dockerfile.goapp.crunch-dispatch-local
@@ -74,7 +74,7 @@ services:
   # dockercleaner:
   # fuse:
   health:
-    image: arvados/health
+    image: nmarvie/health
     build:
       context: .
       dockerfile: Dockerfile.goapp
@@ -82,7 +82,7 @@ services:
         APP_DIR: services
         APP_NAME: health
   keep-balance:
-    image: arvados/keep-balance
+    image: nmarvie/keep-balance
     build:
       context: .
       dockerfile: Dockerfile.goapp
@@ -90,7 +90,7 @@ services:
         APP_DIR: services
         APP_NAME: keep-balance
   keepproxy:
-    image: arvados/keepproxy
+    image: nmarvie/keepproxy
     build:
       context: .
       dockerfile: Dockerfile.goapp
@@ -98,7 +98,7 @@ services:
         APP_DIR: services
         APP_NAME: keepproxy
   keep-web:
-    image: arvados/keep-web
+    image: nmarvie/keep-web
     build:
       context: .
       dockerfile: Dockerfile.goapp
@@ -106,7 +106,7 @@ services:
         APP_DIR: services
         APP_NAME: keep-web
   keepstore:
-    image: arvados/keepstore
+    image: nmarvie/keepstore
     build:
       context: .
       dockerfile: Dockerfile.goapp
