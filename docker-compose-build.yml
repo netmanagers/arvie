@@ -1,6 +1,4 @@
-# According to arvbox, instances are
-# api keep-web workbench2 controller keepstore0 keepstore1 workbench sso websockets arv-git-httpd keepproxy composer docker crunch-dispatch
-
+---
 version: '3'
 
 services:
@@ -23,7 +21,7 @@ services:
         APP_DIR: cmd
         APP_NAME: arvados-client
   ### API
-  # The API image can be build and run standalone as a rails app, 
+  # The API image can be build and run standalone as a rails app,
   api:
     image: nmarvie/api
     build:

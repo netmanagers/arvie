@@ -1,3 +1,4 @@
+---
 # arvados-api-server
 # arvados-composer
 # arvados-dispatch-cloud
@@ -10,7 +11,20 @@
 # arvados-workbench2
 
 # According to arvbox, instances are
-# api keep-web workbench2 controller keepstore0 keepstore1 workbench sso websockets arv-git-httpd keepproxy composer docker crunch-dispatch
+# api
+# keep-web
+# workbench2
+# controller
+# keepstore0
+# keepstore1
+# workbench
+# sso
+# websockets
+# arv-git-httpd
+# keepproxy
+# composer
+# docker
+# crunch-dispatch
 
 version: '3'
 
@@ -27,7 +41,9 @@ services:
       - ${PWD}/scripts/postgresql:/docker-entrypoint-initdb.d
       - ${PWD}/configs/ssl/server.crt:/var/lib/postgresql/server.crt:ro
       - ${PWD}/configs/ssl/server.key:/var/lib/postgresql/server.key:ro
+    # yamllint disable-line rule:line-length
     command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
+    # yamllint enable-line rule:line-length
     environment:
       POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD}
   ### CONTROLLER
@@ -57,7 +73,7 @@ services:
     container_name: api
     image: nmarvie/api
     command: /scripts/ruby/app_start 8004
-    tty: true # Enables debugging capabilities when attached to this container.
+    tty: true   # Enables debugging capabilities when attached to this container.
     ports:
       - 8004:8004
     restart: always
@@ -97,7 +113,7 @@ services:
     container_name: workbench
     image: nmarvie/workbench
     command: /scripts/ruby/app_start 9000
-    tty: true # Enables debugging capabilities when attached to this container.
+    tty: true   # Enables debugging capabilities when attached to this container.
     ports:
       - 9000:9000
     restart: always

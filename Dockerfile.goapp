@@ -22,10 +22,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
 
 WORKDIR /usr/src/arvados/git.arvados.org/arvados.git
 
-RUN --mount=type=cache,target=/root/.cache/go-build,id=cache-go \
+RUN --mount=type=cache,target=/root/.cache,id=root-cache \
+    --mount=type=cache,target=/go/pkg,id=go-cache-pkg \
     go mod download
 
-RUN --mount=type=cache,target=/root/.cache/go-build,id=cache-go \
+RUN --mount=type=cache,target=/root/.cache,id=root-cache \
+    --mount=type=cache,target=/go/pkg,id=go-cache-pkg \
     GOOS=linux \
     go install -a -installsuffix cgo ./$APP_DIR/$APP_NAME
 
