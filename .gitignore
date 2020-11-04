@@ -18,6 +18,7 @@
 .vscode
 _version.py
 cache
+local
 configs/ssl
 doc/.site
 doc/sdk/R/arvados

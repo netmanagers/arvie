@@ -3,7 +3,7 @@
 # This script is used to build the gems cache for the ruby apps.
 # It's run from the instances launched with the docker-compose-cache-builder.yml file
 
-export GEM_HOME=/cache/gems
+export GEM_HOME=/cache/gem
 export NPM_CONFIG_PREFIX=/cache/npm
 
 apt-get update && \

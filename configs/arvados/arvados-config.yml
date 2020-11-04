@@ -1,59 +1,6 @@
+---
 Clusters:
   vwxyz:
-    SystemRootToken: system_root_token
-    ManagementToken: management_token
-    TLS:
-      Insecure: true
-    Services:
-      RailsAPI:
-        InternalURLs:
-          "http://api:8004": {}
-      Workbench1:
-        ExternalURL: "https://workbench:9000"
-      Workbench2:
-        ExternalURL: "https://workbench2:9000"
-      Keepproxy:
-        InternalURLs:
-          "http://keep:25100": {}
-        ExternalURL: "https://localhost:25101"
-      Keepstore:
-        InternalURLs:
-          "http://keep0:25107": {}
-          "http://keep1:25108": {}
-      Websocket:
-        InternalURLs:
-          "http://websocket:8005": {}
-        ExternalURL: "wss://localhost:8002/websocket"
-      GitSSH:
-        ExternalURL: "ssh://git@localhost:"
-      GitHTTP:
-        InternalURLs:
-          "http://git:9001/": {}
-        ExternalURL: "https://localhost:9001/"
-      WebDAV:
-        InternalURLs:
-          "http://keep-web:9002/": {}
-        ExternalURL: "https://localhost:9002/"
-      WebDAVDownload:
-        InternalURLs:
-          "http://keep-web:9002/": {}
-        ExternalURL: "https://localhost:9002/"
-      Composer:
-        ExternalURL: "https://localhost:4200"
-      Controller:
-        InternalURLs:
-          "http://controller:8003": {}
-        ExternalURL: "http://localhost:8003"
-    PostgreSQL:
-      ConnectionPool: 32 # max concurrent connections per arvados server daemon
-      Connection:
-        # All parameters here are passed to the PG client library in a connection string;
-        # see https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
-        host: database
-        user: arvados
-        password: arvados
-        dbname: arvados
-        client_encoding: utf8
     API:
       RailsSessionSecretToken: rails_session_secret_token
     Collections:
@@ -61,37 +8,100 @@ Clusters:
       DefaultReplication: 1
       TrustAllContent: true
     Login:
+      Test:
+        # Authenticate users listed here in the config file. This
+        # feature is intended to be used in test environments, and
+        # should not be used in production.
+        Enable: true
+        Users:
+          alice:
+            Email: alice@vwxyz.arv.local
+            Password: alice
       PAM:
         # (Experimental) Use PAM to authenticate users.
-        Enable: true
+        Enable: false
 
         # PAM service name. PAM will apply the policy in the
         # corresponding config file (e.g., /etc/pam.d/arvados) or, if
-        # there is none, the default "other" config.
+        # there is none, the default 'other' config.
         # Service: arvados
+    ManagementToken: management_token
+    PostgreSQL:
+      ConnectionPool: 32 # max concurrent connections per arvados server daemon
+      Connection:
+        # All parameters here are passed to the PG client library in a connection string;
+        # see https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
+        client_encoding: utf8
+        dbname: arvados_vwxyz
+        host: database
+        password: arvados_vwxyz
+        user: arvados_vwxyz
+    Services:
+      ### EXTERNALURLs are the URL accessible from the host
+      Controller:
+        ExternalURL: 'https://vwxyz.arv.local:8000'
+        InternalURLs:
+          'http://controller:8003': {}
+      # Keepbalance:
+      #   InternalURLs:
+      #     'http://keepbalance:9005': {}
+      Keepproxy:
+        ExternalURL: 'https://keep.vwxyz.arv.local:25101'
+        InternalURLs:
+          'http://keep:25100': {}
+      Keepstore:
+        InternalURLs:
+          'http://keep0:25107': {}
+          'http://keep1:25108': {}
+      RailsAPI:
+        InternalURLs:
+          # WE need to parse it through nginx, apparently
+          # 'http://nginx:4008': {}
+          'http://api:8004': {}
+      WebDAV:
+        ExternalURL: 'https://collections.vwxyz.arv.local:9002'
+        InternalURLs:
+          'http://keepweb:9003/': {}
+      WebDAVDownload:
+        ExternalURL: 'https://download.vwxyz.arv.local:9002'
+        InternalURLs:
+          'http://keepweb:9003/': {}
+      WebShell:
+        ExternalURL: 'https://webshell.vwxyz.arv.local:4202'
+        InternalURLs:
+          'http://webshell:4200/': {}
+      Websocket:
+        ExternalURL: 'wss:///ws.vwxyz.arv.local:8002/websocket'
+        InternalURLs:
+          'http://websocket:8005': {}
+      Workbench1:
+        ExternalURL: 'https://workbench.vwxyz.arv.local:8443'
+      Workbench2:
+        ExternalURL: 'https://workbench2.vwxyz.arv.local:3001'
+    SystemRootToken: system_root_token
+    TLS:
+      Certificate: ''
+      Key: ''
+      Insecure: true
     Users:
-      NewUsersAreActive: true
       AutoAdminFirstUser: true
       AutoSetupNewUsers: true
-      AutoSetupNewUsersWithVmUUID: vm_uuid
       AutoSetupNewUsersWithRepository: true
+      # AutoSetupNewUsersWithVmUUID: vm_uuid
+      NewUsersAreActive: true
     Workbench:
       SecretKeyBase: workbench_secret_key_base
-      ArvadosDocsite: http://localhost:8001/
-    Git:
-      GitCommand: /usr/share/gitolite3/gitolite-shell
-      GitoliteHome: /var/lib/arvados/git
-      Repositories: /var/lib/arvados/git/repositories
+      SiteName: VWXYZ
     Volumes:
       vwxyz-nyw5e-000000000000000:
+        AccessViaHosts:
+          'http://keep0:25107': {}
         Driver: Directory
         DriverParameters:
           Root: /var/lib/arvados/keep0
-        AccessViaHosts:
-          "http://keep0:25107": {}
       vwxyz-nyw5e-111111111111111:
+        AccessViaHosts:
+          'http://keep1:25108': {}
         Driver: Directory
         DriverParameters:
           Root: /var/lib/arvados/keep1
-        AccessViaHosts:
-          "http://keep1:25108": {}

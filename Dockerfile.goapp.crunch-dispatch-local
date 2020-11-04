@@ -38,6 +38,7 @@ FROM debian:buster-slim AS final
 ARG APP_NAME
 # Avoid unnecessary files when installing packages
 COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
     --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
@@ -49,7 +50,6 @@ WORKDIR /app/
 COPY --from=builder /go/bin/$APP_NAME .
 # These other deps are specific to crunch-dispatch-local, as seen in
 # arvados/tools/arvbox/lib/arvbox/docker/service/crunch-dispatch-local/run-service
-COPY ./scripts/arvados/crunch-run.sh /usr/local/bin/
 COPY --from=nmarvie/server /app/arvados-server /usr/local/bin/crunch-run
 # Damn - https://github.com/moby/moby/issues/18492#issuecomment-347364597
 RUN ln -s ./$APP_NAME executable

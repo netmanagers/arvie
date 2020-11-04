@@ -5,7 +5,8 @@
 
 # https://blog.carbonfive.com/2015/03/17/docker-rails-docker-compose-together-in-your-development-workflow/
 
-FROM ruby:slim-buster AS builder
+ARG RUBY_IMAGE
+FROM ${RUBY_IMAGE} AS builder
 # GEMS
 # https://bundler.io/v2.0/guides/bundler_docker_guide.html
 ARG GEM_HOME=/cache/gem
@@ -30,6 +31,7 @@ ENV npm_config_cache_min ${NPM_CACHE_MIN}
 
 # Avoid unnecessary files when installing packages
 COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
 COPY configs/build/gemrc /root/.gemrc
 # We use this to get the config :|
 COPY --from=nmarvie/server /app/arvados-server /usr/local/bin

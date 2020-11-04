@@ -1,31 +1,4 @@
 ---
-# arvados-api-server
-# arvados-composer
-# arvados-dispatch-cloud
-# arvados-docker-cleaner
-# arvados-git-httpd
-# arvados-health
-# arvados-node-manager
-# arvados-sync-groups
-# arvados-workbench
-# arvados-workbench2
-
-# According to arvbox, instances are
-# api
-# keep-web
-# workbench2
-# controller
-# keepstore0
-# keepstore1
-# workbench
-# sso
-# websockets
-# arv-git-httpd
-# keepproxy
-# composer
-# docker
-# crunch-dispatch
-
 version: '3'
 
 services:
@@ -50,8 +23,8 @@ services:
   controller:
     container_name: controller
     image: nmarvie/server
-    ports:
-      - 8003:8003
+    # ports:
+    #   - 8000:8003
     restart: always
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
@@ -59,23 +32,26 @@ services:
     depends_on:
       - database
   ### WEBSOCKETS
-  # websocket:
-  #   container_name: websocket
-  #   image: nmarvie/server
-  #   ports:
-  #     - 8005:8005
-  #   restart: always
-  #   volumes:
-  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-  #   command: ws
+  websocket:
+    container_name: websocket
+    image: nmarvie/server
+    # ports:
+    #   - 8002:8005
+    restart: always
+    volumes:
+      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+    command: ws
+    depends_on:
+      - api
+      - controller
   ### API
   api:
     container_name: api
     image: nmarvie/api
     command: /scripts/ruby/app_start 8004
     tty: true   # Enables debugging capabilities when attached to this container.
-    ports:
-      - 8004:8004
+    # ports:
+    #   - 8004:8004
     restart: always
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
@@ -86,10 +62,8 @@ services:
       - ${ARVBOX_FLAGS}:/arvados/flags
       - ${PWD}/scripts:/scripts
     environment:
-      NPM_CONFIG_PREFIX: ${HOST_NPMCACHE}
+      NPM_CONFIG_PREFIX: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}
-    links:
-      - database
     depends_on:
       - database
       - controller
@@ -98,8 +72,18 @@ services:
     image: nginx:stable-alpine
     restart: always
     ports:
-      - "8080:80"
-      - "4443:443"
+      # Unused. Default
+      # - "8080:80"
+      # Controller
+      - "8000:8000"
+      # Websocket
+      - "8002:8002"
+      # Workbench
+      - "8443:8443"
+      # Keepweb
+      - "9002:9002"
+      # Keepproxy
+      - "25101:25101"
     volumes:
       - ${PWD}/${ETC_NGINX}:/etc/nginx/conf.d
       - ${PWD}/configs/ssl:/etc/nginx/ssl:ro
@@ -112,10 +96,10 @@ services:
   workbench:
     container_name: workbench
     image: nmarvie/workbench
-    command: /scripts/ruby/app_start 9000
+    command: /scripts/ruby/app_start 8002
     tty: true   # Enables debugging capabilities when attached to this container.
-    ports:
-      - 9000:9000
+    # ports:
+    #   - 8443:8443
     restart: always
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
@@ -128,69 +112,77 @@ services:
       - ${ARVBOX_FLAGS}:/arvados/flags
       - ${PWD}/scripts:/scripts
     environment:
-      npm_config_cache: ${NPM_CACHE}
+      npm_config_cache: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}
     depends_on:
       - controller
       - api
   ### GIT-HTTPD
-  git-httpd:
-    container_name: git-httpd
-    image: nmarvie/git-httpd
-    ports:
-      - 9001:9001
-    volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-  crunch-dispatch-local:
-    # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
-    # TL;RL: no, it's not. you better run siblings
-    image: nmarvie/crunch-dispatch-local
-    volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-      - /var/run/docker.sock:/var/run/docker.sock
-  # FIXME
-  # crunch-dispatch-slurm:
-  # crunch-run:
-  # crunchstat:
-  # dockercleaner:
-  # fuse:
-  health:
-    container_name: health
-    image: nmarvie/health
-    volumes:
-      - ${PWD}/${ARVADOS_ROOT}:/usr/src/arvados
-  keep-balance:
-    container_name: keep-balance
-    image: nmarvie/keep-balance
-    volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  # git-httpd:
+  #   container_name: git-httpd
+  #   image: nmarvie/git-httpd
+  #   ports:
+  #     - 9001:9001
+  #   volumes:
+  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  # crunch-dispatch-local:
+  #   container_name: dispatcher
+  #   # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
+  #   # TL;DR: no, it's not. you better run siblings
+  #   image: nmarvie/crunch-dispatch-local
+  #   command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run'
+  #   environment:
+  #     ARVADOS_HOST: api
+  #     ARVADOS_API_TOKEN: system_root_token
+  #     ARVADOS_API_HOST_INSECURE: 1
+  #   volumes:
+  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  # health:
+  #   container_name: health
+  #   image: nmarvie/health
+  #   volumes:
+  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  # keep-balance:
+  #   container_name: keep-balance
+  #   image: nmarvie/keep-balance
+  #   volumes:
+  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   keep:
     container_name: keep
     image: nmarvie/keepproxy
-    ports:
-      - 25100:25100
+    # ports:
+    #   - 25101:25100
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-  keep-web:
-    container_name: keep-web
+    depends_on:
+      - controller
+      - api
+      - keep0
+      - keep1
+  keepweb:
+    container_name: keepweb
     image: nmarvie/keep-web
-    ports:
-      - 9003:9003
+    # ports:
+    #   - 9002:9003
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+    depends_on:
+      - controller
+      - api
   keep0:
     container_name: keep0
     image: nmarvie/keepstore
-    ports:
-      - 25107:25107
+    # ports:
+    #   - 25107:25107
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
       - ${KEEP0_DATA}:/var/lib/arvados/keep0
   keep1:
     container_name: keep1
     image: nmarvie/keepstore
-    ports:
-      - 25108:25108
+    # ports:
+    #   - 25108:25108
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
       - ${KEEP1_DATA}:/var/lib/arvados/keep1
