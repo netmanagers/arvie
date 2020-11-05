@@ -37,3 +37,4 @@ services/api/config/arvados-clients.yml
 tmp
 .vagrant
 *disabled
+configs/example

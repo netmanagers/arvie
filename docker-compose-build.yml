@@ -7,7 +7,7 @@ services:
     image: nmarvie/server
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: cmd
         APP_NAME: arvados-server
@@ -16,7 +16,7 @@ services:
     image: nmarvie/client
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: cmd
         APP_NAME: arvados-client
@@ -26,7 +26,7 @@ services:
     image: nmarvie/api
     build:
       context: .
-      dockerfile: Dockerfile.rails
+      dockerfile: dockerfiles/Dockerfile.rails
       args:
         RUBY_IMAGE: ${RUBY_IMAGE}
         APP_DIR: services
@@ -40,7 +40,7 @@ services:
     image: nmarvie/workbench
     build:
       context: .
-      dockerfile: Dockerfile.rails
+      dockerfile: dockerfiles/Dockerfile.rails
       args:
         RUBY_IMAGE: ${RUBY_IMAGE}
         APP_DIR: apps
@@ -54,7 +54,7 @@ services:
     image: nmarvie/git-httpd
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: services
         APP_NAME: arv-git-httpd
@@ -64,7 +64,7 @@ services:
     image: nmarvie/crunch-dispatch-local
     build:
       context: .
-      dockerfile: Dockerfile.goapp.crunch-dispatch-local
+      dockerfile: dockerfiles/Dockerfile.goapp.crunch-dispatch-local
       args:
         APP_DIR: services
         APP_NAME: crunch-dispatch-local
@@ -77,7 +77,7 @@ services:
     image: nmarvie/health
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: services
         APP_NAME: health
@@ -85,7 +85,7 @@ services:
     image: nmarvie/keep-balance
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: services
         APP_NAME: keep-balance
@@ -93,7 +93,7 @@ services:
     image: nmarvie/keepproxy
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: services
         APP_NAME: keepproxy
@@ -101,7 +101,7 @@ services:
     image: nmarvie/keep-web
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: services
         APP_NAME: keep-web
@@ -109,7 +109,24 @@ services:
     image: nmarvie/keepstore
     build:
       context: .
-      dockerfile: Dockerfile.goapp
+      dockerfile: dockerfiles/Dockerfile.goapp
       args:
         APP_DIR: services
         APP_NAME: keepstore
+  shell:
+    image: nmarvie/shell
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.shell
+      args:
+        RUBY_IMAGE: ${RUBY_IMAGE}
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip
+  compute:
+    image: nmarvie/compute
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.compute
+      args:
+        COMPUTE_IMAGE: ${COMPUTE_IMAGE}

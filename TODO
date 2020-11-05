@@ -1,0 +1,6 @@
+* should postgresql create the database when it starts?
+* we should be able to manage the flags to create database and related stuff better than just /arvados/flags/api_database_setup
+* enable health
+* workbench & api pids should be placed somewhere else or cleaned properly on teardown
+* compute and shell images should NOT use packages, as they're needlessly big
+* prepare should properly setup nginx's geo.conf

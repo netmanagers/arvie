@@ -69,6 +69,17 @@ services:
       - controller
   nginx:
     container_name: nginx
+    networks:
+      default:
+        aliases:
+          - ${CLUSTER}.${DOMAIN}
+          - workbench.${CLUSTER}.${DOMAIN}
+          - workbench2.${CLUSTER}.${DOMAIN}
+          - collections.${CLUSTER}.${DOMAIN}
+          - download.${CLUSTER}.${DOMAIN}
+          - keep.${CLUSTER}.${DOMAIN}
+          - webshell.${CLUSTER}.${DOMAIN}
+          - ws.${CLUSTER}.${DOMAIN}
     image: nginx:stable-alpine
     restart: always
     ports:
@@ -125,19 +136,30 @@ services:
   #     - 9001:9001
   #   volumes:
   #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-  # crunch-dispatch-local:
-  #   container_name: dispatcher
-  #   # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
-  #   # TL;DR: no, it's not. you better run siblings
-  #   image: nmarvie/crunch-dispatch-local
-  #   command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run'
-  #   environment:
-  #     ARVADOS_HOST: api
-  #     ARVADOS_API_TOKEN: system_root_token
-  #     ARVADOS_API_HOST_INSECURE: 1
+  crunch-dispatch-local:
+    container_name: dispatcher
+    # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
+    # TL;DR: no, it's not. you better run siblings
+    image: nmarvie/crunch-dispatch-local
+    # command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run'
+    command: '-poll-interval=1'
+    environment:
+      ARVADOS_HOST: api
+      ARVADOS_API_TOKEN: system_root_token
+      ARVADOS_API_HOST_INSECURE: 1
+    tty: true   # Enables debugging capabilities when attached to this container.
+    volumes:
+      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+  # FIXME! If we want to use the slurm dispatcher
+  # compute0:
+  #   container_name: compute
+  #   image: nmarvie/compute
+  #   tty: true   # Enables debugging capabilities when attached to this container.
   #   volumes:
-  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
   #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - /usr/bin/docker:/usr/bin/docker
   # health:
   #   container_name: health
   #   image: nmarvie/health
@@ -186,3 +208,19 @@ services:
     volumes:
       - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
       - ${KEEP1_DATA}:/var/lib/arvados/keep1
+  shell:
+    container_name: shell
+    image: nmarvie/shell
+    tty: true   # Enables debugging capabilities when attached to this container.
+    # ports:
+    #   - 2222:22
+    volumes:
+      - ${ARVADOS_ROOT}:/usr/src/arvados
+      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
+      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
+      # FIXME! arvados-cwl-runner (and perhaps other tools need docker?)
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+    environment:
+      NPM_CONFIG_PREFIX: /cache/npm
+      npm_config_cache_min: ${NPM_CACHE_MIN}

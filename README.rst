@@ -28,10 +28,17 @@ Mostly because I wanted to play with the tools involved, but also, because I thi
 
 * *For development*: although already exists a docker image for Arvados testing/demo `arbox <https://hub.docker.com/r/arvados/arvbox-demo>`_,
   everything runs in a single image. Arvie runs every component in its own instance, so you can rebuild/recreate
-  each component individually, or even test them without having to spin up all the whole cluster.
-* *For Production* (some day): As I created to play with docker-compose and buildkit, it can probably 
-  be used to be deployed in the cloud (ie, using `Kelda <https://kelda.io>_`. (TODO)
-* *Docker images*: Includes some dockerfiles that allows you to create slim images of each Arvados component (see below). 
+  each component individually, or even test them without having to spin up or rebuild the whole cluster again.
+* *For Production* (some day): As I'm writing this to play with docker-compose and buildkit, it can probably 
+  be used to be deployed in the cloud (ie, using `Kelda <https://kelda.io>`_. (TODO)
+* *Speed*: building **ALL** the images from scratch takes less that 10 minutes in my laptop (i7, 16GB ram).
+  After the initial build, rebuilding any component takes somewhere between 5 seconds to a minute (Rails images
+  are the ones that take most time).
+* *Networked infrastructure*: arvie creates a docker network where each Arvados' component runs in its own *named* container,
+  making it easier to spot components' relationships.
+* *Docker images*: you can create your own Arvados' docker images for each component (see below).
+  I'm uploading images built from Arvados' *master* branch to a `dockerhub repo https://hub.docker.com/u/nmarvie`_
+  so you can use this without needed to build anything but the caches
 * *Kubernetes*: the slim images and config already available in Arvie can probably be migrated for a
   k8s setup. (TODO)
 * Other usages? Ie., learn new tools/things? :smile:
@@ -50,7 +57,7 @@ The default subdir is *arvados*.
 
    $ git clone https://github.com/netmanagers/arvie.git
 
-2. Run the `prepare` script, to get Arvados' subtree and generate a pair of SSL keys for postgres.
+2. Run the ``prepare`` script, to get Arvados' subtree and generate a pair of SSL keys for postgres.
    (As postgres needs the keys with certain permissions and ownership, the script will ask you for
    your sudo password):
 
@@ -64,17 +71,53 @@ if you want to update the Arvados repo, just run
 
    $ git submodule update --checkout
 
-3. Check the variables in the **.env** file, which will be used in a few places. Quite possible you don't
+3. Check the variables in the ``.env`` file, which will be used in a few places. Quite possible you don't
    need to change them.
 
-4. Run the script *builder* with the image you want to build, ie.
+4. (Optional): If you want to build your own images, run the ``builder`` script (or skip to just pull the
+   publicly available Arvie images):
 
 .. code-block:: bash
 
    $ ./builder keepstore ws
 
 to build those two images locally, from the current Arvados tree in your working environment.
-If no image/s are give, all the instances will be built again.
+If no image/s is/are given, all the images will be built again. Run:
+
+.. code-block:: bash
+
+   $ ./builder -h
+
+to get some help.
+
+5. Add an entry in ``/etc/hosts`` to get DNS entries for your cluster:
+
+.. code-block:: bash
+
+   $ echo \
+       127.0.0.2 \
+       api \
+       keep \
+       keep0 \
+       collections \
+       download \
+       ws \
+       workbench \
+       workbench2 \
+       api.vwxyz.arv.local \
+       keep.vwxyz.arv.local \
+       keep0.vwxyz.arv.local \
+       collections.vwxyz.arv.local \
+       download.vwxyz.arv.local \
+       ws.vwxyz.arv.local \
+       workbench.vwxyz.arv.local \
+       workbench2.vwxyz.arv.local \
+       vwxyz.arv.local \
+       >> /etc/hosts
+
+5. Run ``docker-compose up`` to spin up the cluster.
+6. Point your browser to `https://workbench.vwxyz.arv.local:8443/`_ and login to
+   your cluster (initial user/pass: alice/alice)
 
 Status
 ------
@@ -84,50 +127,50 @@ So far, the scripts can build docker images for the following components
 .. code-block:: bash
 
    REPOSITORY                      TAG                 IMAGE ID            CREATED             SIZE
-   arvados/keepstore               latest              7a9f4fac7245        15 minutes ago      88.2MB
-   arvados/keep-web                latest              8ae09a142eea        17 minutes ago      87.6MB
-   arvados/keepproxy               latest              2de1ff3bed23        21 minutes ago      85.6MB
-   arvados/keep-balance            latest              dfa57bc21913        23 minutes ago      85.8MB
-   arvados/health                  latest              ac394015b7d0        25 minutes ago      85.5MB
-   arvados/crunch-dispatch-local   latest              52ef37d98166        26 minutes ago      83.8MB
-   arvados/git-httpd               latest              d7aa4a0f08dc        28 minutes ago      85.3MB
-   arvados/workbench               latest              c86bad628fe4        29 minutes ago      974MB
-   arvados/api                     latest              c3357fe16512        35 minutes ago      911MB
-   arvados/client                  latest              3b0fe999a49e        38 minutes ago      86.3MB
-   arvados/server                  latest              6775654d0d9d        40 minutes ago      114MB
+   nmarvie/compute                 latest              0de2ea413d7f        13 hours ago        190MB
+   nmarvie/shell                   latest              b3cddf00f1e7        15 hours ago        757MB
+   nmarvie/keepstore               latest              0e903cbefdf8        23 hours ago        92.8MB
+   nmarvie/keepproxy               latest              3f97aa2cd894        23 hours ago        84.3MB
+   nmarvie/workbench               latest              b4871ce60674        23 hours ago        663MB
+   nmarvie/api                     latest              accaca9f80a5        23 hours ago        635MB
+   nmarvie/keep-web                latest              9f9396865106        7 days ago          86.3MB
+   nmarvie/keep-balance            latest              0ce7ab96b18e        7 days ago          84.5MB
+   nmarvie/health                  latest              a9ffa91bb6ff        7 days ago          84.2MB
+   nmarvie/crunch-dispatch-local   latest              d0d1a7fdde5b        7 days ago          123MB
+   nmarvie/git-httpd               latest              09656234d70b        7 days ago          84.1MB
+   nmarvie/client                  latest              cd95446a2bfa        7 days ago          85.7MB
+   nmarvie/server                  latest              808e8218a12c        7 days ago          111MB
 
-Running `docker-compose` can start most of the instances, create the Arvados database and populate it.
-
-And running `docker-compose up` we get here:
+And running `docker-compose up` we get:
 
 .. code-block:: bash
 
    $ docker-compose ps
-   Name                                Command                 State               Ports
-   ----------------------------------------------------------------------------------------------------------------
-   arvados-compose_api_1                     /scripts/ruby/app_start 8004     Up           0.0.0.0:8004->8004/tcp
-   arvados-compose_controller_1              ./executable controller          Up           0.0.0.0:8003->8003/tcp
-   arvados-compose_crunch-dispatch-local_1   ./executable                     Exit 1
-   arvados-compose_database_1                docker-entrypoint.sh postg ...   Up           0.0.0.0:5432->5432/tcp
-   arvados-compose_git-httpd_1               ./executable                     Up           0.0.0.0:9001->9001/tcp
-   arvados-compose_health_1                  ./executable                     Exit 1
-   arvados-compose_keep-balance_1            ./executable                     Exit 1
-   arvados-compose_keep-web_1                ./executable                     Up           0.0.0.0:9003->9003/tcp
-   arvados-compose_keep0_1                   ./executable                     Up           0.0.0.0:25107->25107/tcp
-   arvados-compose_keep1_1                   ./executable                     Up           0.0.0.0:25108->25108/tcp
-   arvados-compose_keepproxy_1               ./executable                     Up           0.0.0.0:25100->25100/tcp
-   arvados-compose_nginx_1                   nginx -g daemon off;             Restarting
-   arvados-compose_websocket_1               ./executable ws                  Up           0.0.0.0:8005->8005/tcp
-   arvados-compose_workbench_1               /scripts/ruby/app_start 9002     Up           0.0.0.0:9002->9002/tcp
-
+   Name                 Command               State                                                             Ports
+   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   api          /scripts/ruby/app_start 8004     Up
+   controller   ./executable controller          Up
+   database     docker-entrypoint.sh postg ...   Up       0.0.0.0:5432->5432/tcp
+   dispatcher   ./executable -poll-interval=1    Exit 1
+   keep         ./executable                     Up
+   keep0        ./executable                     Up
+   keep1        ./executable                     Up
+   keepweb      ./executable                     Up
+   nginx        /docker-entrypoint.sh ngin ...   Up       0.0.0.0:25101->25101/tcp, 80/tcp, 0.0.0.0:8000->8000/tcp, 0.0.0.0:8002->8002/tcp, 0.0.0.0:8443->8443/tcp,
+                                                          0.0.0.0:9002->9002/tcp
+                                                          shell        irb                              Up
+                                                          websocket    ./executable ws                  Up
+                                                          workbench    /scripts/ruby/app_start 8002     Up
 
 TODO
 ----
 
-* Get Arvie to a useful state
+* Get Arvie to a useful state (almost there)
 * Testing (real testing)
 * Improve configuration (too many hardcoded things atm)
 * Add missing features/configs
+
+and what's in the `TODO TODO`_ file :smile:
 
 Contributing to this repo
 -------------------------
