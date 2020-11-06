@@ -102,7 +102,10 @@ services:
     volumes:
       - ${PWD}/${ETC_NGINX}:/etc/nginx/conf.d
       - ${PWD}/configs/ssl:/etc/nginx/ssl:ro
-      - ./jaeger-config.json:/etc/jaeger-config.json
+      # This is for opentracing with jaeger
+      # https://github.com/opentracing-contrib/nginx-opentracing/tree/master/example/trivial/jaeger
+      - ${PWD}/configs/extras/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${PWD}/configs/extras/jaeger-nginx-config.json:/etc/jaeger-config.json
     depends_on:
       - controller
       - api
