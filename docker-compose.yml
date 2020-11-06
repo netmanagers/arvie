@@ -15,7 +15,7 @@ services:
       - ${PWD}/configs/ssl/server.crt:/var/lib/postgresql/server.crt:ro
       - ${PWD}/configs/ssl/server.key:/var/lib/postgresql/server.key:ro
     # yamllint disable-line rule:line-length
-    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
+    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key -c log_statement=all
     # yamllint enable-line rule:line-length
     environment:
       POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD}
@@ -80,7 +80,7 @@ services:
           - keep.${CLUSTER}.${DOMAIN}
           - webshell.${CLUSTER}.${DOMAIN}
           - ws.${CLUSTER}.${DOMAIN}
-    image: nginx:stable-alpine
+    image: opentracing/nginx-opentracing
     restart: always
     ports:
       # Unused. Default
@@ -95,14 +95,33 @@ services:
       - "9002:9002"
       # Keepproxy
       - "25101:25101"
+      # Opentracing
+      - "8080:8080"
+    expose:
+      - "8080"
     volumes:
       - ${PWD}/${ETC_NGINX}:/etc/nginx/conf.d
       - ${PWD}/configs/ssl:/etc/nginx/ssl:ro
+      - ./jaeger-config.json:/etc/jaeger-config.json
     depends_on:
       - controller
       - api
       - workbench
       - keep
+  jaeger:
+    image: jaegertracing/all-in-one
+    environment:
+      - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+    networks:
+      default:
+        aliases:
+          - jaeger
+    expose:
+      - "9411"
+      - "16686"
+    ports:
+      - "9411:9411"
+      - "16686:16686"
   ### WORKBENCH
   workbench:
     container_name: workbench
