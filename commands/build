@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+COMMAND=$(basename $0)
+
+usage() {
+  echo >&2
+  echo >&2 "Builds local images of Arvados' components, from the Arvados subdir"
+  echo >&2
+  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [component1] [component2] ..."
+  echo >&2
+  echo >&2 "${COMMAND} options:"
+  # echo >&2 "  -n, --no-cache        Don't recreate the gem/pip/npm cache before building any image"
+  echo >&2 "  -h, --help            Display this help and exit"
+  echo >&2 "  [componentN]          Image to build/rebuild. Defaults to all of them"
+  echo >&2
+}
+
+if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
+  usage
+  exit 0
+fi
+
+# We use the docker-compose's .env file to configure arvie
+source .env
+
+IMAGES_TO_BUILD=$@
+
+echo "Building local Arvados' images"
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose --file docker-compose/build.yml --log-level DEBUG build ${IMAGES_TO_BUILD}

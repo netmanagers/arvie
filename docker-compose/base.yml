@@ -1,4 +1,7 @@
 ---
+# This is the base docker-compose.yml file, common to all the other ones.
+# Is the one that will be used when invoking 'arvie up'
+
 version: '3'
 
 services:

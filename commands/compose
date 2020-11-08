@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+COMMAND=$(basename $0)
+
+usage() {
+  echo >&2
+  echo >&2 "Passes the arguments it receives to 'docker-compose'"
+  echo >&2
+  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [arguments to docker compose]" 
+  echo >&2
+  echo >&2 "${COMMAND} options:"
+  echo >&2 "  -h, --help            Display this help and exit"
+  echo >&2 "  [argumentsN]          The resto of the line will be passed verbatim to docker-compose"
+  echo >&2
+}
+
+if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
+  usage
+  exit 0
+fi
+
+# We use the docker-compose's .env file to configure arvie
+source .env
+
+echo "Running docker-compose"
+docker-compose --file docker-compose/base.yml --log-level DEBUG $@

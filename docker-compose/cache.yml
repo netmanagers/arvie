@@ -1,11 +1,11 @@
 ---
-# This file is a cache builder helper.
+# This is the cache builder docker-compose.yml file.
+# Is the one that will be used when invoking 'arvie prepare'
+
 # You can use it before building images, to get a cache of npm, gems, pip or
 # go packages/modules and to overcame the fact that docker can't mount
 # volumes at build time.
 
-# Using this cache will also improve the speed api/workbench/workbench2 takes to start,
-# as they might they require gems and npm packages updated when they start
 version: '3'
 
 services:

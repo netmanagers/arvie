@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+COMMAND=$(basename $0)
+
+usage() {
+  echo >&2
+  echo >&2 "Prepares your environment to run arvie, creating SSL certs for postgresql"
+  echo >&2 "populating the Arvados submodule dir and creating the cache."
+  echo >&2
+  echo >&2 "If all requirements are already fulfilled, it will do nothing."
+  echo >&2 "Otherwise, will create any of the missing ones."
+  echo >&2
+  echo >&2 "Usage: arvie ${COMMAND} [-h|--help]"
+  echo >&2
+}
+
+if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
+  usage
+  exit 0
+fi
+
+# We use the docker-compose's .env file to configure arvie
+source .env
+
+if [ -f configs/ssl/server.key ]; then
+  echo "The snakeoil cert already exists. Skiping"
+else
+  echo "Generating SSL certs for Postgresql (and nginx for now)"
+  mkdir -p configs/ssl
+  openssl req -new -text -passout pass:abcd -subj /CN=localhost -out configs/ssl/server.req -keyout configs/ssl/privkey.pem
+  openssl rsa -in configs/ssl/privkey.pem -passin pass:abcd -out configs/ssl/server.key
+  openssl req -x509 -in configs/ssl/server.req -text -key configs/ssl/server.key -out configs/ssl/server.crt
+  chmod 600 configs/ssl/server.key
+  test $(uname -s) == Linux && sudo chown 70 configs/ssl/server.key
+fi
+
+if [ -f arvados/CODE_OF_CONDUCT.md ]; then
+  echo "Arvados repository already exists. Skiping"
+else
+  echo "Downloading Arvados into the 'arvados/' subdir"
+  git submodule update --init
+  git submodule update --checkout
+fi
+
+if [ -d "${HOST_GEMCACHE}" -a -d ${HOST_GOCACHE} -a -d ${HOST_PIPCACHE} -a ${HOST_NPMCACHE} ]; then
+  echo "Arvados cache directories already exist. Skiping"
+else
+  # Create the cache dirs to speed up later runs
+  mkdir -p ${HOST_GEMCACHE} ${HOST_GOCACHE} ${HOST_PIPCACHE} ${HOST_NPMCACHE}
+
+  echo "Building the NPM, Ruby gems and Golang caches"
+  COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose --file docker-compose/cache.yml up --remove-orphans gem-cache
+  echo "Tearing down the images used to build the cache"
+  docker-compose --file docker-compose/cache.yml down
+fi
+
+echo "arvie environment is ready"

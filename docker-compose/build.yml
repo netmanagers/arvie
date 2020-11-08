@@ -1,4 +1,7 @@
 ---
+# This is the build docker-compose.yml file.
+# Is the one that will be used when invoking 'arvie build'
+
 version: '3'
 
 services:

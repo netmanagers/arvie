@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# This script is just a 'caller' for the different arvie commands written
+# in the directory 'commands'
+# I'm trying to use the least amount of magic or assumptions possible and
+# KISS
+
+set -euo pipefail
+
+[ ! -d "commands" ] && echo "This script must be run from arvie's root directory" && exit 1
+
+usage() {
+  echo >&2
+  echo >&2 "Usage: $0 [-h|--help] [command] [options]"
+  echo >&2
+  echo >&2 "$0 parameters:"
+  echo >&2 "  -h, --help: Display this help and exit"
+  echo >&2 "  command: One of"
+    echo >&2 "          up"
+    echo >&2 "          down"
+  for c in ${AVAILABLE_COMMANDS}; do 
+    echo >&2 "          $c"
+  done
+  echo >&2 "    You can use the command 'compose' to pass verbatim instructions"
+  echo >&2 "    to 'docker-compose', with the yaml files used to run Arvados"
+  echo >&2 ""
+  echo >&2 "    To get help for an specific command, run"
+  echo >&2 "    $0 <command> [-h|--help]"
+  echo >&2 ""
+}
+
+AVAILABLE_COMMANDS=$(ls commands | grep -v README.rst)
+
+if [ $# -eq 0 -o "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
+  usage
+  exit 1
+fi
+
+COMMAND_LINE=$@
+
+if [ "x${1}" = "xup" -o "x${1}" = "xdown" ]; then
+  COMMAND_LINE="compose $@"
+fi
+
+echo "Running: ${COMMAND_LINE}"
+./commands/${COMMAND_LINE}
