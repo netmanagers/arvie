@@ -28,4 +28,7 @@ source .env
 IMAGES_TO_BUILD=$@
 
 echo "Building local Arvados' images"
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose --file docker-compose/build.yml --log-level DEBUG build ${IMAGES_TO_BUILD}
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose \
+  --file docker-compose/base.yml \
+  --file docker-compose/build.yml \
+  --log-level DEBUG build ${IMAGES_TO_BUILD}

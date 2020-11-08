@@ -6,7 +6,7 @@
 # go packages/modules and to overcame the fact that docker can't mount
 # volumes at build time.
 
-version: '3'
+version: '3.8'
 
 services:
   ### NPM

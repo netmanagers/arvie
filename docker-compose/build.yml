@@ -2,34 +2,56 @@
 # This is the build docker-compose.yml file.
 # Is the one that will be used when invoking 'arvie build'
 
-version: '3'
+version: '3.8'
 
+### GOAPP BUILD DEFAULT PARAMETERS
+x-goapp_build_defaults: &goapp_build_defaults
+  context: ../
+  dockerfile: dockerfiles/Dockerfile.goapp
+
+### RAILS BUILD DEFAULT PARAMETERS
+x-rails_build_defaults: &rails_build_defaults
+  context: ../
+  dockerfile: dockerfiles/Dockerfile.rails
+
+### ARVADOS-SERVER BUILD
+x-arvados_server_build: &arvados_server_build
+  build:
+    <<: *goapp_build_defaults
+    args:
+      APP_DIR: cmd
+      APP_NAME: arvados-server
+
+# SERVICES
 services:
   ### ARVADOS-SERVER
   arvados-server:
     image: nmarvie/server
-    build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
-      args:
-        APP_DIR: cmd
-        APP_NAME: arvados-server
+    <<: *arvados_server_build
+
   ### ARVADOS-CLIENT
   arvados-client:
     image: nmarvie/client
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
+      <<: *goapp_build_defaults
       args:
         APP_DIR: cmd
         APP_NAME: arvados-client
+
+  ### CONTROLLER
+  controller:
+    <<: *arvados_server_build
+
+  ### WEBSOCKET
+  websocket:
+    <<: *arvados_server_build
+
   ### API
   # The API image can be build and run standalone as a rails app,
   api:
     image: nmarvie/api
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.rails
+      <<: *rails_build_defaults
       args:
         RUBY_IMAGE: ${RUBY_IMAGE}
         APP_DIR: services
@@ -38,12 +60,12 @@ services:
         GEM_HOME: /cache/gem
         NPM_CONFIG_PREFIX: /cache/npm
         PIPCACHE: /cache/pip
+
   ### WORKBENCH
   workbench:
     image: nmarvie/workbench
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.rails
+      <<: *rails_build_defaults
       args:
         RUBY_IMAGE: ${RUBY_IMAGE}
         APP_DIR: apps
@@ -52,21 +74,23 @@ services:
         GEM_HOME: /cache/gem
         NPM_CONFIG_PREFIX: /cache/npm
         PIPCACHE: /cache/pip
+
   ### GIT-HTTPD
   git-httpd:
     image: nmarvie/git-httpd
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
+      <<: *goapp_build_defaults
       args:
         APP_DIR: services
         APP_NAME: arv-git-httpd
+
+  ### CRUNCH-DISPATCH-LOCAL
   crunch-dispatch-local:
     # FIXME! Not sure if it needs a whole dockerd or a docker client
     # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
     image: nmarvie/crunch-dispatch-local
     build:
-      context: .
+      <<: *goapp_build_defaults
       dockerfile: dockerfiles/Dockerfile.goapp.crunch-dispatch-local
       args:
         APP_DIR: services
@@ -76,60 +100,69 @@ services:
   # crunchstat:
   # dockercleaner:
   # fuse:
+
+  ### HEALTH
   health:
     image: nmarvie/health
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
+      <<: *goapp_build_defaults
       args:
         APP_DIR: services
         APP_NAME: health
+
+  ### KEEP-BALANCE
   keep-balance:
     image: nmarvie/keep-balance
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
+      <<: *goapp_build_defaults
       args:
         APP_DIR: services
         APP_NAME: keep-balance
+
+  ### KEEPPROXY
   keepproxy:
     image: nmarvie/keepproxy
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
+      <<: *goapp_build_defaults
       args:
         APP_DIR: services
         APP_NAME: keepproxy
+
+  ### KEEP-WEB
   keep-web:
     image: nmarvie/keep-web
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
+      <<: *goapp_build_defaults
       args:
         APP_DIR: services
         APP_NAME: keep-web
+
+  ### KEEPSTORE
   keepstore:
     image: nmarvie/keepstore
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.goapp
+      <<: *goapp_build_defaults
       args:
         APP_DIR: services
         APP_NAME: keepstore
+
+  ### SHELL
   shell:
     image: nmarvie/shell
     build:
-      context: .
+      context: ../
       dockerfile: dockerfiles/Dockerfile.shell
       args:
         RUBY_IMAGE: ${RUBY_IMAGE}
         GEM_HOME: /cache/gem
         NPM_CONFIG_PREFIX: /cache/npm
         PIPCACHE: /cache/pip
+
+  ### COMPUTE
   compute:
     image: nmarvie/compute
     build:
-      context: .
+      context: ../
       dockerfile: dockerfiles/Dockerfile.compute
       args:
         COMPUTE_IMAGE: ${COMPUTE_IMAGE}

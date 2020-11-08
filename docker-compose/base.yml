@@ -2,8 +2,29 @@
 # This is the base docker-compose.yml file, common to all the other ones.
 # Is the one that will be used when invoking 'arvie up'
 
-version: '3'
+version: '3.8'
 
+# VOLUMES ANCHORS TO DRY THE CONFIG
+x-volumes-arvados-config: &volumes-arvados-config
+  ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+x-volumes-arvados-src: &volumes-arvados-src
+  ${ARVADOS_ROOT}:/usr/src/arvados
+x-volumes-cache-gem: &volumes-cache-gem
+  ${PWD}/${HOST_GEMCACHE}:/cache/gem
+x-volumes-cache-npm: &volumes-cache-npm
+  ${PWD}/${HOST_NPMCACHE}:/cache/npm
+x-volumes-cache-pip: &volumes-cache-pip
+  ${PWD}/${HOST_PIPCACHE}:/cache.pip
+x-volumes-flags: &volumes-flags
+  ${ARVBOX_FLAGS}:/arvados/flags
+x-volumes-scripts: &volumes-scripts
+  ${PWD}/scripts:/scripts
+x-volumes-docker-sock: &volumes-docker-sock
+  /var/run/docker.sock:/var/run/docker.sock
+x-volumes-docker-bin: &volumes-docker-bin
+  /usr/bin/docker:/usr/bin/docker
+
+# SERVICES
 services:
   ### DATABASE
   database:
@@ -22,28 +43,30 @@ services:
     # yamllint enable-line rule:line-length
     environment:
       POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD}
+
   ### CONTROLLER
   controller:
     container_name: controller
-    image: nmarvie/server
+    image: nmarvie/controller
+    command: controller
     # ports:
     #   - 8000:8003
     restart: always
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-    command: controller
+      - *volumes-arvados-config
     depends_on:
       - database
+
   ### WEBSOCKETS
   websocket:
     container_name: websocket
-    image: nmarvie/server
+    image: nmarvie/websocket
+    command: ws
     # ports:
     #   - 8002:8005
     restart: always
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-    command: ws
+      - *volumes-arvados-config
     depends_on:
       - api
       - controller
@@ -57,13 +80,13 @@ services:
     #   - 8004:8004
     restart: always
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - *volumes-arvados-config
       - ${PWD}/${ETC_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
-      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
-      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
-      - ${ARVADOS_ROOT}:/usr/src/arvados
-      - ${ARVBOX_FLAGS}:/arvados/flags
-      - ${PWD}/scripts:/scripts
+      - *volumes-cache-gem
+      - *volumes-cache-npm
+      - *volumes-arvados-src
+      - *volumes-flags
+      - *volumes-scripts
     environment:
       NPM_CONFIG_PREFIX: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}
@@ -138,15 +161,15 @@ services:
     #   - 8443:8443
     restart: always
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - *volumes-arvados-config
       - ${PWD}/${ETC_ARVADOS}/arvados-workbench-application.yml:/etc/arvados/application.yml
       # FIXME! This needs to be really used
-      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
-      - ${PWD}/${HOST_PIPCACHE}:/cache.pip
-      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
-      - ${ARVADOS_ROOT}:/usr/src/arvados
-      - ${ARVBOX_FLAGS}:/arvados/flags
-      - ${PWD}/scripts:/scripts
+      - *volumes-cache-gem
+      - *volumes-cache-pip
+      - *volumes-cache-npm
+      - *volumes-arvados-src
+      - *volumes-flags
+      - *volumes-scripts
     environment:
       npm_config_cache: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}
@@ -160,7 +183,7 @@ services:
   #   ports:
   #     - 9001:9001
   #   volumes:
-  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  #     - *volumes-arvados-config
   crunch-dispatch-local:
     container_name: dispatcher
     # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
@@ -174,34 +197,34 @@ services:
       ARVADOS_API_HOST_INSECURE: 1
     tty: true   # Enables debugging capabilities when attached to this container.
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker
+      - *volumes-arvados-config
+      - *volumes-docker-sock
+      - *volumes-docker-bin
   # FIXME! If we want to use the slurm dispatcher
   # compute0:
   #   container_name: compute
   #   image: nmarvie/compute
   #   tty: true   # Enables debugging capabilities when attached to this container.
   #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #     - /usr/bin/docker:/usr/bin/docker
+  #     - *volumes-docker-sock
+  #     - *volumes-docker-bin
   # health:
   #   container_name: health
   #   image: nmarvie/health
   #   volumes:
-  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  #     - *volumes-arvados-config
   # keep-balance:
   #   container_name: keep-balance
   #   image: nmarvie/keep-balance
   #   volumes:
-  #     - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  #     - *volumes-arvados-config
   keep:
     container_name: keep
     image: nmarvie/keepproxy
     # ports:
     #   - 25101:25100
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - *volumes-arvados-config
     depends_on:
       - controller
       - api
@@ -213,7 +236,7 @@ services:
     # ports:
     #   - 9002:9003
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - *volumes-arvados-config
     depends_on:
       - controller
       - api
@@ -223,7 +246,7 @@ services:
     # ports:
     #   - 25107:25107
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - *volumes-arvados-config
       - ${KEEP0_DATA}:/var/lib/arvados/keep0
   keep1:
     container_name: keep1
@@ -231,7 +254,7 @@ services:
     # ports:
     #   - 25108:25108
     volumes:
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - *volumes-arvados-config
       - ${KEEP1_DATA}:/var/lib/arvados/keep1
   shell:
     container_name: shell
@@ -240,12 +263,12 @@ services:
     # ports:
     #   - 2222:22
     volumes:
-      - ${ARVADOS_ROOT}:/usr/src/arvados
-      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
-      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
+      - *volumes-arvados-src
+      - *volumes-cache-gem
+      - *volumes-cache-npm
       # FIXME! arvados-cwl-runner (and perhaps other tools need docker?)
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker
+      - *volumes-docker-sock
+      - *volumes-docker-bin
     environment:
       NPM_CONFIG_PREFIX: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}
