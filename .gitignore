@@ -19,7 +19,6 @@
 _version.py
 cache
 local
-configs/ssl
 doc/.site
 doc/sdk/R/arvados
 doc/sdk/java-v2/javadoc
@@ -37,4 +36,6 @@ services/api/config/arvados-clients.yml
 tmp
 .vagrant
 *disabled
-configs/example
+configs/ssl
+configs/examplea
+configs/build/LAST_BUILD_INFO

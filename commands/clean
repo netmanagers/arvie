@@ -26,8 +26,9 @@ source .env
 
 # Clean stuff lingering around so we can reset everything
 cd ${ARVADOS_ROOT} || exit 1
+
 echo "FIXME! Removing PID files"
-sudo rm -v apps/workbench/tmp/pids/server.pid services/api/tmp/pids/server.pid
+sudo rm -vf apps/workbench/tmp/pids/server.pid services/api/tmp/pids/server.pid
 
 echo "FIXME! resetting db files, modified by api on startup"
 git checkout -- apps/workbench/db/schema.rb services/api/db/structure.sql
@@ -35,5 +36,5 @@ cd ${BASE_DIR}
 
 if [ "x${1:-}" = "x-a" -o "x${1:-}" = "x--all" ]; then
   echo "Removing all locally persisted data"
-  sudo rm -rv ${HOST_CACHE_DIR} ${HOST_DATA_DIR}
+  sudo rm -rvf ${HOST_CACHE_DIR} ${HOST_DATA_DIR}
 fi

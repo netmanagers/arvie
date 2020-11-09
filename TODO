@@ -26,34 +26,10 @@ Rails::Instrumentation.instrument
 
 
 
--n, --no-cache        Don't recreate the gem/pip/npm cache before building any image
-2:06
-es anti natural decir "no cache" para que sea mas rapido
-￼￼
-Nico Cesar  2:50 PM
-builder controller no funciona
-2:51
-y builder <image>  es la ayuda
-2:51
-que deberia ser nvarvie-server
-2:51
-pero es  arvados-server
-2:51
-creo que el parametro deberia ser el componente: controller (edited) 
-￼
-￼
-￼
-￼
 ok.. veo cosas para mejorara en argie...
 3:46
 que le pasa al directorio arvados? porque termino con  "HEAD detached at <commit"
 3:48
-ademas.... mi idea es saber que estoy corriendo ... estaria bueno tener algun tag que me diga
-3:49
-te digo porque lo que quiero correr ahora es una branch alternativa o commits en el pasado y es dificil identificar que estoy corriendo
-3:49
-docker tiene tags ...
-3:50
 por ejemplo agregue a .env esto:
 ## JAEGER configuration from environment
 JAEGER_AGENT_HOST=arvie_jaeger_1

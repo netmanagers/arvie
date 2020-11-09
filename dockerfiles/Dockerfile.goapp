@@ -47,6 +47,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
 
 WORKDIR /app/
 COPY --from=builder /go/bin/$APP_NAME .
+COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
 # Damn - https://github.com/moby/moby/issues/18492#issuecomment-347364597
 RUN ln -s ./$APP_NAME executable
 ENTRYPOINT ["./executable"]

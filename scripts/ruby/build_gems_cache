@@ -29,6 +29,6 @@ apt-get install --yes \
 cd /usr/src/arvados
 for GF in apps/workbench services/api; do
   cd ${GF}
-  bundle install --retry=20
+  bundle install --retry=20 --verbose
   cd -
 done

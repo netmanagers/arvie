@@ -8,31 +8,80 @@ usage() {
   echo >&2
   echo >&2 "Builds local images of Arvados' components, from the Arvados subdir"
   echo >&2
-  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [component1] [component2] ..."
+  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [-t|--tag TAG] [component1] [component2] ..."
   echo >&2
   echo >&2 "${COMMAND} options:"
   echo >&2 "  -c, --cache           Rebuild the gem/pip/npm cache before building any image"
+  echo >&2 "  -t, --tag <TAG>       Add the <TAG> value in a /BUILD_INFO file inside the running image"
+  echo >&2 "                        and also use it as an image tag, to be able to build/use different"
+  echo >&2 "                        versions of the different components, mostly for development/testing"
   echo >&2 "  -h, --help            Display this help and exit"
   echo >&2 "  [componentN]          Image to build/rebuild. Defaults to all of them"
   echo >&2
 }
 
-if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
-  usage
-  exit 0
-fi
+arguments() {
+  # NOTE: This requires GNU getopt (part of the util-linux package on Debian-based distros).
+  TEMP=`getopt -o hct: \
+    --long help,cache,tag: \
+    -n "$0" -- "$@"`
+
+  if [ $? != 0 ] ; then usage; exit 1 ; fi
+
+  # Note the quotes around '$TEMP': they are essential!
+  eval set -- "$TEMP"
+
+  while [ $# -ge 1 ]; do
+    case $1 in
+      -c | --cache)
+        CACHE="yes"
+        shift
+        ;;
+      -t | --tag)
+        TAG=${2}
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        usage
+        exit 0
+        ;;
+    esac
+  done
+
+  IMAGES_TO_BUILD=$@
+}
+
+TAG="latest"
+IMAGES_TO_BUILD=""
+CACHE="no"
+
+arguments $@
 
 # We use the docker-compose's .env file to configure arvie
 source .env
 
-if [ "x${1:-}" = "x-c" -o "x${1:-}" = "x--cache" ]; then
-  source command/prepare
-  shift
+if [ "${CACHE}" = "yes" -o ! -d ${HOST_CACHE_DIR} ]; then
+  source commands/prepare
 fi
 
-IMAGES_TO_BUILD=$@
+# Get the commit and branch to add them to the /BUILD_INFO file
+cd ${ARVADOS_ROOT}
+BUILD_COMMIT=$(git rev-parse --short HEAD)
+BUILD_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+cd ${BASE_DIR}
+
+cat > ${HOST_CONF_BUILD}/LAST_BUILD_INFO << EOF
+BUILD_BRANCH="${BUILD_BRANCH}"
+BUILD_COMMIT="${BUILD_COMMIT}"
+BUILD_TAG="${TAG}"
+EOF
 
 echo "Building local Arvados' images"
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose \
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 BUILD_TAG="${TAG}" docker-compose \
   --file docker-compose/build.yml \
-  --log-level DEBUG build ${IMAGES_TO_BUILD}
+  --log-level DEBUG build \
+  ${IMAGES_TO_BUILD}

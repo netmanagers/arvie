@@ -47,7 +47,7 @@ services:
   ### CONTROLLER
   controller:
     container_name: controller
-    image: nmarvie/controller
+    image: nmarvie/controller:${BUILD_TAG}
     command: controller
     # ports:
     #   - 8000:8003
@@ -60,7 +60,7 @@ services:
   ### WEBSOCKETS
   websocket:
     container_name: websocket
-    image: nmarvie/websocket
+    image: nmarvie/websocket:${BUILD_TAG}
     command: ws
     # ports:
     #   - 8002:8005
@@ -73,7 +73,7 @@ services:
   ### API
   api:
     container_name: api
-    image: nmarvie/api
+    image: nmarvie/api:${BUILD_TAG}
     command: /scripts/ruby/app_start 8004
     tty: true   # Enables debugging capabilities when attached to this container.
     # ports:
@@ -132,7 +132,7 @@ services:
   ### WORKBENCH
   workbench:
     container_name: workbench
-    image: nmarvie/workbench
+    image: nmarvie/workbench:${BUILD_TAG}
     command: /scripts/ruby/app_start 8002
     tty: true   # Enables debugging capabilities when attached to this container.
     # ports:
@@ -157,7 +157,7 @@ services:
   ### GIT-HTTPD
   # git-httpd:
   #   container_name: git-httpd
-  #   image: nmarvie/git-httpd
+  #   image: nmarvie/git-httpd:${BUILD_TAG}
   #   ports:
   #     - 9001:9001
   #   volumes:
@@ -166,7 +166,7 @@ services:
     container_name: dispatcher
     # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
     # TL;DR: no, it's not. you better run siblings
-    image: nmarvie/crunch-dispatch-local
+    image: nmarvie/crunch-dispatch-local:${BUILD_TAG}
     # command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run'
     command: '-poll-interval=1'
     environment:
@@ -181,24 +181,24 @@ services:
   # FIXME! If we want to use the slurm dispatcher
   # compute0:
   #   container_name: compute
-  #   image: nmarvie/compute
+  #   image: nmarvie/compute:${BUILD_TAG}
   #   tty: true   # Enables debugging capabilities when attached to this container.
   #   volumes:
   #     - *volumes-docker-sock
   #     - *volumes-docker-bin
   # health:
   #   container_name: health
-  #   image: nmarvie/health
+  #   image: nmarvie/health:${BUILD_TAG}
   #   volumes:
   #     - *volumes-arvados-config
   # keep-balance:
   #   container_name: keep-balance
-  #   image: nmarvie/keep-balance
+  #   image: nmarvie/keep-balance:${BUILD_TAG}
   #   volumes:
   #     - *volumes-arvados-config
   keepproxy:
     container_name: keep
-    image: nmarvie/keepproxy
+    image: nmarvie/keepproxy:${BUILD_TAG}
     # ports:
     #   - 25101:25100
     volumes:
@@ -210,7 +210,7 @@ services:
       - keep1
   keepweb:
     container_name: keepweb
-    image: nmarvie/keep-web
+    image: nmarvie/keep-web:${BUILD_TAG}
     # ports:
     #   - 9002:9003
     volumes:
@@ -220,7 +220,7 @@ services:
       - api
   keep0:
     container_name: keep0
-    image: nmarvie/keepstore
+    image: nmarvie/keepstore:${BUILD_TAG}
     # ports:
     #   - 25107:25107
     volumes:
@@ -228,7 +228,7 @@ services:
       - ${KEEP0_DATA}:/var/lib/arvados/keep0
   keep1:
     container_name: keep1
-    image: nmarvie/keepstore
+    image: nmarvie/keepstore:${BUILD_TAG}
     # ports:
     #   - 25108:25108
     volumes:
@@ -236,7 +236,7 @@ services:
       - ${KEEP1_DATA}:/var/lib/arvados/keep1
   shell:
     container_name: shell
-    image: nmarvie/shell
+    image: nmarvie/shell:${BUILD_TAG}
     tty: true   # Enables debugging capabilities when attached to this container.
     # ports:
     #   - 2222:22
