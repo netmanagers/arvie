@@ -27,14 +27,12 @@ source .env
 
 if [ "x${1:-}" = "x-c" -o "x${1:-}" = "x--cache" ]; then
   source command/prepare
-
+  shift
 fi
 
 IMAGES_TO_BUILD=$@
-
 
 echo "Building local Arvados' images"
 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose \
   --file docker-compose/build.yml \
   --log-level DEBUG build ${IMAGES_TO_BUILD}
-  #--file docker-compose/base.yml \

@@ -1,9 +1,0 @@
-#!/bin/bash -x
-
-# Clean stuff lingering around so we can reset everything
-echo "FIXME! Removing PID files"
-sudo rm  ./arvados/apps/workbench/tmp/pids/server.pid ./arvados/services/api/tmp/pids/server.pid
-echo "FIXME! resetting db files"
-cd arvados
-git checkout -- apps/workbench/db/schema.rb services/api/db/structure.sql
-
