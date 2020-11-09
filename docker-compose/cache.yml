@@ -21,16 +21,16 @@ services:
     container_name: gem-cache
     image: ${RUBY_IMAGE}
     volumes:
-      - ${PWD}/configs/build/dpkg-nodoc:/etc/dpkg/dpkg.cfg.d/01_nodoc
-      - ${PWD}/configs/build/gemrc:/root/.gemrc
+      - ${HOST_CONF_BUILD}/dpkg-nodoc:/etc/dpkg/dpkg.cfg.d/01_nodoc
+      - ${HOST_CONF_BUILD}/gemrc:/root/.gemrc
 
-      - ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
-      - ${PWD}/${ETC_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
-      - ${PWD}/${HOST_GEMCACHE}:/cache/gem
-      - ${PWD}/${HOST_NPMCACHE}:/cache/npm
+      - ${HOST_CONF_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+      - ${HOST_CONF_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
+      - ${HOST_GEMCACHE}:/cache/gem
+      - ${HOST_NPMCACHE}:/cache/npm
       - ${ARVADOS_ROOT}:/usr/src/arvados
       - ${PWD}/scripts:/scripts
     environment:
-      NPM_CONFIG_PREFIX: ${HOST_NPMCACHE}
+      NPM_CONFIG_PREFIX: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}
     command: /scripts/ruby/build_gems_cache

@@ -6,15 +6,15 @@ version: '3.8'
 
 # VOLUMES ANCHORS TO DRY THE CONFIG
 x-volumes-arvados-config: &volumes-arvados-config
-  ${PWD}/${ETC_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+  ${HOST_CONF_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
 x-volumes-arvados-src: &volumes-arvados-src
   ${ARVADOS_ROOT}:/usr/src/arvados
 x-volumes-cache-gem: &volumes-cache-gem
-  ${PWD}/${HOST_GEMCACHE}:/cache/gem
+  ${HOST_GEMCACHE}:/cache/gem
 x-volumes-cache-npm: &volumes-cache-npm
-  ${PWD}/${HOST_NPMCACHE}:/cache/npm
+  ${HOST_NPMCACHE}:/cache/npm
 x-volumes-cache-pip: &volumes-cache-pip
-  ${PWD}/${HOST_PIPCACHE}:/cache.pip
+  ${HOST_PIPCACHE}:/cache.pip
 x-volumes-flags: &volumes-flags
   ${ARVBOX_FLAGS}:/arvados/flags
 x-volumes-scripts: &volumes-scripts
@@ -35,9 +35,9 @@ services:
       - '5432:5432'
     volumes:
       - ${PG_DATA}:/var/lib/postgresql/data
-      - ${PWD}/scripts/postgresql:/docker-entrypoint-initdb.d
-      - ${PWD}/configs/ssl/server.crt:/var/lib/postgresql/server.crt:ro
-      - ${PWD}/configs/ssl/server.key:/var/lib/postgresql/server.key:ro
+      - ${HOST_SCRIPTS_DIR}/postgresql:/docker-entrypoint-initdb.d
+      - ${HOST_CONF_DIR}/ssl/server.crt:/var/lib/postgresql/server.crt:ro
+      - ${HOST_CONF_DIR}/ssl/server.key:/var/lib/postgresql/server.key:ro
     # yamllint disable-line rule:line-length
     command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key -c log_statement=all
     # yamllint enable-line rule:line-length
@@ -81,7 +81,7 @@ services:
     restart: always
     volumes:
       - *volumes-arvados-config
-      - ${PWD}/${ETC_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
+      - ${HOST_CONF_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
       - *volumes-cache-gem
       - *volumes-cache-npm
       - *volumes-arvados-src
@@ -122,13 +122,13 @@ services:
       # Keepproxy
       - "25101:25101"
     volumes:
-      - ${PWD}/${ETC_NGINX}:/etc/nginx/conf.d
-      - ${PWD}/configs/ssl:/etc/nginx/ssl:ro
+      - ${HOST_CONF_NGINX}:/etc/nginx/conf.d
+      - ${HOST_CONF_DIR}/ssl:/etc/nginx/ssl:ro
     depends_on:
       - controller
       - api
       - workbench
-      - keep
+      - keepproxy
   ### WORKBENCH
   workbench:
     container_name: workbench
@@ -140,7 +140,7 @@ services:
     restart: always
     volumes:
       - *volumes-arvados-config
-      - ${PWD}/${ETC_ARVADOS}/arvados-workbench-application.yml:/etc/arvados/application.yml
+      - ${HOST_CONF_ARVADOS}/arvados-workbench-application.yml:/etc/arvados/application.yml
       # FIXME! This needs to be really used
       - *volumes-cache-gem
       - *volumes-cache-pip
@@ -196,7 +196,7 @@ services:
   #   image: nmarvie/keep-balance
   #   volumes:
   #     - *volumes-arvados-config
-  keep:
+  keepproxy:
     container_name: keep
     image: nmarvie/keepproxy
     # ports:

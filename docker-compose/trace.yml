@@ -15,8 +15,8 @@ services:
     volumes:
       # This is for opentracing with jaeger
       # https://github.com/opentracing-contrib/nginx-opentracing/tree/master/example/trivial/jaeger
-      - ${PWD}/configs/extras/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ${PWD}/configs/extras/jaeger-nginx-config.json:/etc/jaeger-config.json
+      - ${HOST_CONF_TRACE}/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${HOST_CONF_TRACE}/jaeger-nginx-config.json:/etc/jaeger-config.json
   jaeger:
     container_name: jaeger
     image: jaegertracing/all-in-one
