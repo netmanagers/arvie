@@ -12,17 +12,49 @@ usage() {
   echo >&2
   echo >&2 "${COMMAND} options:"
   echo >&2 "  -h, --help            Display this help and exit"
+  echo >&2 "  -t, --tag <TAG>       Image <TAG> to use/invoke. Defaults to 'latest'"
   echo >&2 "  [argumentsN]          The resto of the line will be passed verbatim to docker-compose"
   echo >&2
 }
 
-if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
-  usage
-  exit 0
-fi
+arguments() {
+  # NOTE: This requires GNU getopt (part of the util-linux package on Debian-based distros).
+  TEMP=`getopt -o ht: \
+    --long help,tag: \
+    -n "$0" -- "$@"`
+
+  if [ $? != 0 ] ; then usage; exit 1 ; fi
+
+  # Note the quotes around '$TEMP': they are essential!
+  eval set -- "$TEMP"
+
+  while [ $# -ge 1 ]; do
+    case $1 in
+      -t | --tag)
+        TAG=${2}
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        usage
+        exit 0
+        ;;
+    esac
+  done
+
+  COMMAND_LINE=$@
+}
+
+TAG="latest"
+COMMAND_LINE=""
+
+arguments $@
 
 # We use the docker-compose's .env file to configure arvie
 source .env
 
 echo "Running docker-compose"
-docker-compose --file docker-compose/base.yml --log-level DEBUG $@
+BUILD_TAG=${TAG} docker-compose --file docker-compose/base.yml --log-level DEBUG ${COMMAND_LINE}
