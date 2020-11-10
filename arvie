@@ -39,6 +39,8 @@ fi
 COMMAND_LINE=$@
 
 if [ "x${1}" = "xup" -o "x${1}" = "xdown" ]; then
+  # We need the caches and certs in place to start the service
+  ./commands/prepare
   COMMAND_LINE="compose $@"
 fi
 
