@@ -1,5 +1,5 @@
 development:
-  uuid_prefix: vwxyz
+  uuid_prefix: __CLUSTER__
   secret_token: secret_token
   blob_signing_key: blob_signing_key
   sso_app_secret: sso_app_secret

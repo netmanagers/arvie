@@ -1,6 +1,6 @@
 ---
 Clusters:
-  vwxyz:
+  __CLUSTER__:
     API:
       RailsSessionSecretToken: rails_session_secret_token
     Collections:
@@ -15,7 +15,7 @@ Clusters:
         Enable: true
         Users:
           alice:
-            Email: alice@vwxyz.arv.local
+            Email: alice@__CLUSTER__.__DOMAIN__
             Password: alice
       PAM:
         # (Experimental) Use PAM to authenticate users.
@@ -32,21 +32,21 @@ Clusters:
         # All parameters here are passed to the PG client library in a connection string;
         # see https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
         client_encoding: utf8
-        dbname: arvados_vwxyz
+        dbname: arvados___CLUSTER__
         host: database
-        password: arvados_vwxyz
-        user: arvados_vwxyz
+        password: arvados___CLUSTER__
+        user: arvados___CLUSTER__
     Services:
       ### EXTERNALURLs are the URL accessible from the host
       Controller:
-        ExternalURL: 'https://vwxyz.arv.local:8000'
+        ExternalURL: 'https://__CLUSTER__.__DOMAIN__:8000'
         InternalURLs:
           'http://controller:8003': {}
       # Keepbalance:
       #   InternalURLs:
       #     'http://keepbalance:9005': {}
       Keepproxy:
-        ExternalURL: 'https://keep.vwxyz.arv.local:25101'
+        ExternalURL: 'https://keep.__CLUSTER__.__DOMAIN__:25101'
         InternalURLs:
           'http://keep:25100': {}
       Keepstore:
@@ -59,25 +59,25 @@ Clusters:
           # 'http://nginx:4008': {}
           'http://api:8004': {}
       WebDAV:
-        ExternalURL: 'https://collections.vwxyz.arv.local:9002'
+        ExternalURL: 'https://collections.__CLUSTER__.__DOMAIN__:9002'
         InternalURLs:
           'http://keepweb:9003/': {}
       WebDAVDownload:
-        ExternalURL: 'https://download.vwxyz.arv.local:9002'
+        ExternalURL: 'https://download.__CLUSTER__.__DOMAIN__:9002'
         InternalURLs:
           'http://keepweb:9003/': {}
       WebShell:
-        ExternalURL: 'https://webshell.vwxyz.arv.local:4202'
+        ExternalURL: 'https://webshell.__CLUSTER__.__DOMAIN__:4202'
         InternalURLs:
           'http://webshell:4200/': {}
       Websocket:
-        ExternalURL: 'wss:///ws.vwxyz.arv.local:8002/websocket'
+        ExternalURL: 'wss:///ws.__CLUSTER__.__DOMAIN__:8002/websocket'
         InternalURLs:
           'http://websocket:8005': {}
       Workbench1:
-        ExternalURL: 'https://workbench.vwxyz.arv.local:8443'
+        ExternalURL: 'https://workbench.__CLUSTER__.__DOMAIN__:8443'
       Workbench2:
-        ExternalURL: 'https://workbench2.vwxyz.arv.local:3001'
+        ExternalURL: 'https://workbench2.__CLUSTER__.__DOMAIN__:3001'
     SystemRootToken: system_root_token
     TLS:
       Certificate: ''
@@ -93,13 +93,13 @@ Clusters:
       SecretKeyBase: workbench_secret_key_base
       SiteName: VWXYZ
     Volumes:
-      vwxyz-nyw5e-000000000000000:
+      __CLUSTER__-nyw5e-000000000000000:
         AccessViaHosts:
           'http://keep0:25107': {}
         Driver: Directory
         DriverParameters:
           Root: /var/lib/arvados/keep0
-      vwxyz-nyw5e-111111111111111:
+      __CLUSTER__-nyw5e-111111111111111:
         AccessViaHosts:
           'http://keep1:25108': {}
         Driver: Directory

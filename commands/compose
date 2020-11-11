@@ -38,7 +38,7 @@ arguments() {
         shift
         break
         ;;
-      *)
+      -h | --help)
         usage
         exit 0
         ;;
