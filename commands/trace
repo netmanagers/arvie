@@ -9,9 +9,7 @@ usage() {
   echo >&2 "Starts Arvados with Opentracing+Jaeger"
   echo >&2 "It passes the commands verbatim to docker-compose, so start it with"
   echo >&2
-  echo >&2 "    arvie ${COMMAND} up"
-  echo >&2
-  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [arguments to docker compose]" 
+  echo >&2 "Usage: arvie <CLUSTER> ${COMMAND} [-h|--help] [arguments to docker compose]" 
   echo >&2
   echo >&2 "${COMMAND} options:"
   echo >&2 "  -h, --help            Display this help and exit"
@@ -24,10 +22,21 @@ if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
   exit 0
 fi
 
+CLUSTER=${1}
+
+# Check if the cluster already exists
+if [ ! -d ${CLUSTER} ]; then
+  echo >&2 "ERROR: cluster ${CLUSTER} does not yet exist."
+  echo >&2
+  echo >&2 "       Please, create the cluster environment first, with the command"
+  echo >&2
+  echo >&2 "       arvie <CLUSTER> env"
+  exit 1
+fi
+
 # We use the docker-compose's .env file to configure arvie
-source .env
+source ${CLUSTER}/${CLUSTER}.env
 
 echo "Running docker-compose"
-docker-compose --file docker-compose/base.yml \
-               --file docker-compose/trace.yml \
+docker-compose --file ${CLUSTER}/trace.yml \
                --log-level DEBUG $@

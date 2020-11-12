@@ -8,7 +8,9 @@ usage() {
   echo >&2
   echo >&2 "Builds local images of Arvados' components, from the Arvados subdir"
   echo >&2
-  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [-t|--tag TAG] [component1] [component2] ..."
+  echo >&2 "Usage: arvie <CLUSTER> ${COMMAND} [-h|--help] [-t|--tag TAG] [component1] [component2] ..."
+  echo >&2
+  echo >&2 "  <CLUSTER> the cluster on which [${COMMAND}] will be applied"
   echo >&2
   echo >&2 "${COMMAND} options:"
   echo >&2 "  -c, --cache           Rebuild the gem/pip/npm cache before building any image"
@@ -52,6 +54,8 @@ arguments() {
     esac
   done
 
+  CLUSTER=${1}
+  shift
   IMAGES_TO_BUILD=$@
 }
 
@@ -61,14 +65,25 @@ CACHE="no"
 
 arguments $@
 
+# Check if the cluster already exists
+if [ ! -d ${CLUSTER} ]; then
+  echo >&2 "ERROR: cluster ${CLUSTER} does not yet exist."
+  echo >&2
+  echo >&2 "       Please, create the cluster environment first, with the command"
+  echo >&2
+  echo >&2 "       arvie <CLUSTER> env"
+  exit 1
+fi
+
 # We use the docker-compose's .env file to configure arvie
-source .env
+source ${CLUSTER}/${CLUSTER}.env
 
 if [ "${CACHE}" = "yes" -o ! -d ${HOST_CACHE_DIR} ]; then
   source commands/prepare
 fi
 
 # Get the commit and branch to add them to the /BUILD_INFO file
+# so we know which commit/branch we're building from
 cd ${ARVADOS_ROOT}
 BUILD_COMMIT=$(git rev-parse --short HEAD)
 BUILD_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -80,8 +95,9 @@ BUILD_COMMIT="${BUILD_COMMIT}"
 BUILD_TAG="${TAG}"
 EOF
 
-echo "Building local Arvados' images"
+echo "Building ${CLUSTER} Arvados' images"
 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 BUILD_TAG="${TAG}" docker-compose \
-  --file docker-compose/build.yml \
+  --env-file ${CLUSTER}/${CLUSTER}.env \
+  --file ${CLUSTER}/build.yml \
   --log-level DEBUG build \
   ${IMAGES_TO_BUILD}

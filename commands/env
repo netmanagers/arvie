@@ -8,11 +8,13 @@ usage() {
   echo >&2
   echo >&2 "Prepares and manages Arvie environments to run clusters"
   echo >&2
-  echo >&2 "Usage: arvie ${COMMAND} [-h|--help]" 
+  echo >&2 "Usage: arvie <CLUSTER> ${COMMAND} [-h|--help]" 
+  echo >&2
+  echo >&2 "  <CLUSTER> the cluster on which [${COMMAND}] will be applied"
   echo >&2
   echo >&2 "           -h, --help            Display this help and exit"
   echo >&2
-  echo >&2 "       arvie ${COMMAND} create [-t|--template TEMPLATE] [-v|--var VAR1=value] [-v|--var VAR2=value2] [-v|--var VARN=valueN] <CLUSTER> [DOMAIN]" 
+  echo >&2 "       arvie <CLUSTER> ${COMMAND} create [-t|--template TEMPLATE] [-v|--var VAR1=value] [-v|--var VAR2=value2] [-v|--var VARN=valueN] [DOMAIN]" 
   echo >&2
   echo >&2 "         create options:"
   echo >&2 "           -t, --template        One of the templates from the 'scaffold' dir"
@@ -91,6 +93,16 @@ DOMAIN="arv.local"
 
 arguments $@
 set_required_params ${COMMAND_LINE}
+
+# Check if the cluster already exists
+if [ ! -d ${CLUSTER} ]; then
+  echo >&2 "ERROR: cluster ${CLUSTER} does not yet exist."
+  echo >&2
+  echo >&2 "       Please, create the cluster environment first, with the command"
+  echo >&2
+  echo >&2 "       arvie <CLUSTER> env"
+  exit 1
+fi
 
 # Add the final replacement strings
 [ "x${SED}" != "x" ] && SED="${SED};"

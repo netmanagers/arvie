@@ -12,7 +12,9 @@ usage() {
   echo >&2 "If all requirements are already fulfilled, it will do nothing."
   echo >&2 "Otherwise, will create any of the missing ones."
   echo >&2
-  echo >&2 "Usage: arvie ${COMMAND} [-h|--help]"
+  echo >&2 "Usage: arvie <CLUSTER> ${COMMAND} [-h|--help]>"
+  echo >&2
+  echo >&2 "  <CLUSTER> the cluster environment that will be prepared"
   echo >&2
 }
 
@@ -21,21 +23,34 @@ if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
   exit 0
 fi
 
-# We use the docker-compose's .env file to configure arvie
-source .env
+CLUSTER=${1}
 
-if [ -f configs/ssl/server.key ]; then
+# Check if the cluster already exists
+if [ ! -d ${CLUSTER} ]; then
+  echo >&2 "ERROR: cluster ${CLUSTER} does not yet exist."
+  echo >&2
+  echo >&2 "       Please, create the cluster environment first, with the command"
+  echo >&2
+  echo >&2 "       arvie <CLUSTER> env"
+  exit 1
+fi
+
+# We use the cluster's docker-compose .env file to configure arvie
+source ${CLUSTER}/${CLUSTER}.env
+
+if [ -f ${HOST_CONF_DIR}/ssl/server.key ]; then
   echo "The snakeoil cert already exists. Skiping"
 else
   echo "Generating SSL certs for Postgresql (and nginx for now)"
-  mkdir -p configs/ssl
-  openssl req -new -text -passout pass:abcd -subj /CN=localhost -out configs/ssl/server.req -keyout configs/ssl/privkey.pem
-  openssl rsa -in configs/ssl/privkey.pem -passin pass:abcd -out configs/ssl/server.key
-  openssl req -x509 -in configs/ssl/server.req -text -key configs/ssl/server.key -out configs/ssl/server.crt
-  chmod 600 configs/ssl/server.key
-  test $(uname -s) == Linux && sudo chown 70 configs/ssl/server.key
+  mkdir -p ${HOST_CONF_DIR}/ssl
+  openssl req -new -text -passout pass:abcd -subj /CN=localhost -out ${HOST_CONF_DIR}/ssl/server.req -keyout ${HOST_CONF_DIR}/ssl/privkey.pem
+  openssl rsa -in ${HOST_CONF_DIR}/ssl/privkey.pem -passin pass:abcd -out ${HOST_CONF_DIR}/ssl/server.key
+  openssl req -x509 -in ${HOST_CONF_DIR}/ssl/server.req -text -key ${HOST_CONF_DIR}/ssl/server.key -out ${HOST_CONF_DIR}/ssl/server.crt
+  chmod 600 ${HOST_CONF_DIR}/ssl/server.key
+  test $(uname -s) == Linux && sudo chown 70 ${HOST_CONF_DIR}/ssl/server.key
 fi
 
+# FIXME! We should remove this and let the user say where is the Arvados code
 if [ -f arvados/CODE_OF_CONDUCT.md ]; then
   echo "Arvados repository already exists. Skiping"
 else
@@ -51,9 +66,13 @@ else
   mkdir -p ${HOST_GEMCACHE} ${HOST_GOCACHE} ${HOST_PIPCACHE} ${HOST_NPMCACHE}
 
   echo "Building the NPM, Ruby gems and Golang caches"
-  COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose --file docker-compose/cache.yml up --remove-orphans gem-cache
+  COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose \
+    --env-file ${CLUSTER}/${CLUSTER}.env \
+    --file ${CLUSTER}/cache.yml \
+    up --remove-orphans gem-cache
+
   echo "Tearing down the images used to build the cache"
-  docker-compose --file docker-compose/cache.yml down
+  docker-compose --file ${CLUSTER}/cache.yml down
 fi
 
-echo "arvie environment is ready"
+echo "${CLUSTER} environment is ready"

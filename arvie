@@ -11,19 +11,17 @@ set -euo pipefail
 
 usage() {
   echo >&2
-  echo >&2 "Usage: $0 [-h|--help] [command] [options]"
+  echo >&2 "Usage: $0 [-h|--help] <CLUSTER> <command> [options]"
   echo >&2
   echo >&2 "$0 parameters:"
   echo >&2 "  -h, --help: Display this help and exit"
+  echo >&2 "  <CLUSTER> the cluster on which [command] will be applied"
   echo >&2 "  command: One of"
     echo >&2 "          up"
     echo >&2 "          down"
-  for c in ${AVAILABLE_COMMANDS}; do 
+  for c in ${AVAILABLE_COMMANDS}; do
     echo >&2 "          $c"
   done
-  echo >&2 "    You can use the command 'compose' to pass verbatim instructions"
-  echo >&2 "    to 'docker-compose', with the yaml files used to run Arvados"
-  echo >&2 ""
   echo >&2 "    To get help for an specific command, run"
   echo >&2 "    $0 <command> [-h|--help]"
   echo >&2 ""
@@ -31,18 +29,38 @@ usage() {
 
 AVAILABLE_COMMANDS=$(ls commands | grep -v README.rst)
 
-if [ $# -eq 0 -o "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
+# For less than 2 parameters (cluster, command), we show usage and exit
+if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" -o $# -lt 2 ]; then
   usage
   exit 1
 fi
 
-COMMAND_LINE=$@
-
-if [ "x${1}" = "xup" -o "x${1}" = "xdown" ]; then
-  # We need the caches and certs in place to start the service
-  ./commands/prepare
-  COMMAND_LINE="compose $@"
+# First parameter must be the cluster. The rest, the command and parameters
+if [ ${#1} -ne 5 ]; then
+  echo "ERROR: <CLUSTER> must be exactly 5 characters long"
+  usage
+  exit 1
 fi
+CLUSTER=${1}
+shift
+COMMAND=${1}
+shift
+PARAMETERS=$@
 
-echo "Running: ${COMMAND_LINE}"
+# Prepare the line to pass to the commands
+case "x${COMMAND}" in
+  "xup")
+    # We need the caches and certs in place to start the service
+    ./commands/prepare ${CLUSTER}
+    COMMAND_LINE="compose ${CLUSTER} ${COMMAND} ${PARAMETERS}"
+    ;;
+  "xdown")
+    COMMAND_LINE="compose ${CLUSTER} ${COMMAND} ${PARAMETERS}"
+    ;;
+  *)
+    COMMAND_LINE="${COMMAND} ${CLUSTER} ${PARAMETERS}"
+    ;;
+esac
+
+echo "Running: ${COMMAND} ${PARAMETERS} on cluster ${CLUSTER}"
 ./commands/${COMMAND_LINE}

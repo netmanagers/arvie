@@ -6,9 +6,11 @@ COMMAND=$(basename $0)
 
 usage() {
   echo >&2
-  echo >&2 "Passes the arguments it receives to 'docker-compose'"
+  echo >&2 "Passes the arguments it receives verbatim to 'docker-compose'"
   echo >&2
-  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [arguments to docker compose]" 
+  echo >&2 "Usage: arvie <CLUSTER> ${COMMAND} [-h|--help] [arguments to docker compose]" 
+  echo >&2
+  echo >&2 "  <CLUSTER> the cluster on which [${COMMAND}] will be applied"
   echo >&2
   echo >&2 "${COMMAND} options:"
   echo >&2 "  -h, --help            Display this help and exit"
@@ -45,6 +47,8 @@ arguments() {
     esac
   done
 
+  CLUSTER=${1}
+  shift
   COMMAND_LINE=$@
 }
 
@@ -53,8 +57,20 @@ COMMAND_LINE=""
 
 arguments $@
 
+# Check if the cluster already exists
+if [ ! -d ${CLUSTER} ]; then
+  echo >&2 "ERROR: cluster ${CLUSTER} does not yet exist."
+  echo >&2
+  echo >&2 "       Please, create the cluster environment first, with the command"
+  echo >&2
+  echo >&2 "       arvie <CLUSTER> env"
+  exit 1
+fi
+
 # We use the docker-compose's .env file to configure arvie
-source .env
+source ${CLUSTER}/${CLUSTER}.env
 
 echo "Running docker-compose"
-BUILD_TAG=${TAG} docker-compose --file docker-compose/base.yml --log-level DEBUG ${COMMAND_LINE}
+BUILD_TAG=${TAG} docker-compose \
+  --file ${CLUSTER}/base.yml \
+  --log-level DEBUG ${COMMAND_LINE}

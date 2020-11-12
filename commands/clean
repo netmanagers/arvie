@@ -8,7 +8,9 @@ usage() {
   echo >&2
   echo >&2 "Deletes lingering Arvados files or all data ,if desired"
   echo >&2
-  echo >&2 "Usage: arvie ${COMMAND} [-h|--help] [-a|--all]"
+  echo >&2 "Usage: arvie <CLUSTER> ${COMMAND} [-h|--help] [-a|--all]"
+  echo >&2
+  echo >&2 "  <CLUSTER> the cluster on which [${COMMAND}] will be applied"
   echo >&2
   echo >&2 "${COMMAND} options:"
   echo >&2 "  -h, --help            Display this help and exit"
@@ -22,19 +24,32 @@ if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" ]; then
   exit 0
 fi
 
-source .env
+CLUSTER=${1}
+
+# Check if the cluster already exists
+if [ ! -d ${CLUSTER} ]; then
+  echo >&2 "ERROR: cluster ${CLUSTER} does not yet exist."
+  echo >&2
+  echo >&2 "       Please, create the cluster environment first, with the command"
+  echo >&2
+  echo >&2 "       arvie <CLUSTER> env"
+  exit 1
+fi
+
+# We use the docker-compose's .env file to configure arvie
+source ${CLUSTER}/${CLUSTER}.env
 
 # Clean stuff lingering around so we can reset everything
 cd ${ARVADOS_ROOT} || exit 1
 
-echo "FIXME! Removing PID files"
-sudo rm -vf apps/workbench/tmp/pids/server.pid services/api/tmp/pids/server.pid
+echo "FIXME! Removing PID files. This is an issue with multiple clusters!!!!"
+echo sudo rm -vf apps/workbench/tmp/pids/server.pid services/api/tmp/pids/server.pid
 
-echo "FIXME! resetting db files, modified by api on startup"
-git checkout -- apps/workbench/db/schema.rb services/api/db/structure.sql
+echo "FIXME! resetting db files, modified by api on startup. This is an issue with multiple clusters!!!!"
+echo git checkout -- apps/workbench/db/schema.rb services/api/db/structure.sql
 cd ${BASE_DIR}
 
 if [ "x${1:-}" = "x-a" -o "x${1:-}" = "x--all" ]; then
   echo "Removing all locally persisted data"
-  sudo rm -rvf ${HOST_CACHE_DIR} ${HOST_DATA_DIR}
+  echo sudo rm -rvf ${HOST_CACHE_DIR} ${HOST_DATA_DIR}
 fi
