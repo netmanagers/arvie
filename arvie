@@ -1,66 +1,387 @@
 #!/usr/bin/env bash
 
-# This script is just a 'caller' for the different arvie commands written
-# in the directory 'commands'
-# I'm trying to use the least amount of magic or assumptions possible and
-# KISS
-
 set -euo pipefail
 
-[ ! -d "commands" ] && echo "This script must be run from arvie's root directory" && exit 1
+COMMAND=$(basename "${0}")
+
+ARVIEPATH=$(dirname "${0}")
+
+DBGCMD="echo   ----> "
 
 usage() {
+  echo >&2 "Arvie runs Arvados with docker-compose https://github.com/netmanagers/arvie"
   echo >&2
-  echo >&2 "Usage: $0 [-h|--help] <CLUSTER> <command> [options]"
+  echo >&2 "Usage: ${COMMAND} [-h|--help] <command> [options]"
   echo >&2
-  echo >&2 "$0 parameters:"
-  echo >&2 "  -h, --help: Display this help and exit"
-  echo >&2 "  <CLUSTER> the cluster on which [command] will be applied"
-  echo >&2 "  command: One of"
-    echo >&2 "          up"
-    echo >&2 "          down"
-  for c in ${AVAILABLE_COMMANDS}; do
-    echo >&2 "          $c"
-  done
-  echo >&2 "    To get help for an specific command, run"
-  echo >&2 "    $0 <command> [-h|--help]"
-  echo >&2 ""
+  echo >&2 "${COMMAND} options:"
+  echo >&2
+  echo >&2 "      -h, --help            Display this help and exit"
+  echo >&2
+  echo >&2 "Environment variables:"
+  echo >&2 "  * ARVIE_ENV:              Arvie's env dir to use as part of various dirs to create"
+  echo >&2 "                            Defaults to 'arvie'"
+  echo >&2 "                            Current value '${ARVIE_ENV}'"
+  echo >&2 "  * ARVIE_CLUSTER:          A unique 5 letters word to use as the Arvados' cluster name"
+  echo >&2 "                            Defaults to 'arvie'"
+  echo >&2 "                            Current value '${ARVIE_CLUSTER}'"
+  echo >&2 "  * ARVIE_DATA:             Directory where arvie's data will be persisted"
+  echo >&2 "                            Defaults to '${HOME}/.local/arvie/arvie'"
+  echo >&2 "                            Current value '${HOME}/.local/arvie/${ARVIE_ENV}'"
+  echo >&2 "  * ARVIE_CONFIG:           Directory where arvie's config is stored"
+  echo >&2 "                            Defaults to '${HOME}/.config/arvie/arvie'"
+  echo >&2 "                            Current value '${HOME}/.config/arvie/${ARVIE_ENV}'"
+  echo >&2
+  echo >&2 "Commands and options:"
+  echo >&2
+  echo >&2 "  * build: Builds local docker images of Arvados' components, from the Arvados subdir"
+  echo >&2
+  echo >&2 "    Usage: ${COMMAND} build [-t|--tag TAG] [component1] [component2] ..."
+  echo >&2
+  echo >&2 "    build options:"
+  echo >&2 "      -c, --cache           Rebuild the gem/pip/npm cache before building any image"
+  echo >&2 "      -t, --tag <TAG>       Add the <TAG> value in a /BUILD_INFO file inside the running image"
+  echo >&2 "                             and also use it as an image tag, to be able to build/use different"
+  echo >&2 "                             versions of the different components, mostly for development/testing"
+  echo >&2 "      [componentN]          Image to build/rebuild. Defaults to all of them"
+  echo >&2
+  echo >&2 "  * env: Prepares and manages Arvie environments to run clusters"
+  echo >&2
+  echo >&2 "    Usage: ${COMMAND} create [-s|--scaffold SCAFFOLD] [-n|--name NAME] [-d|--domain DOMAIN] [-v|--var VAR1=value] [-v|--var VAR2=value2] [-v|--var VARN=valueN]"
+  echo >&2
+  echo >&2 "    create options:"
+  echo >&2 "      -n, --name            A unique 5 letters word to use as the Arvados' cluster name"
+  echo >&2 "                            Defaults to \$ARVIE_CLUSTER (current value: ${ARVIE_CLUSTER})"
+  echo >&2 "      -s, --scaffold        One of the templates from the 'scaffold' dir"
+  echo >&2 "                              which will be used to create the new cluster config"
+  echo >&2 "                            Defaults to 'template1'"
+  echo >&2 "      -d, --domain DOMAIN   The domain you want to use for your cluster. Defaults to arv.local"
+  echo >&2 "      -v, --var VAR=value   KEY=value pairs to use in a sed replacement over the selected template"
+  echo >&2
+  echo >&2 "  * prepare: Prepares Arvie's environment, populating the Arvados submodule dir and creating the cache."
+  echo >&2
+  echo >&2 "    Usage: ${COMMAND} prepare"
+  echo >&2
+  echo >&2 "           If all requirements are already fulfilled, it will do nothing."
+  echo >&2 "           Otherwise, will create any of the missing ones."
+  echo >&2
+  echo >&2 "  * clean: Deletes lingering Arvados files () or all data, if desired"
+  echo >&2
+  echo >&2 "    Usage: ${COMMAND} clean [-a|--all]"
+  echo >&2
+  echo >&2 "    clean options:"
+  echo >&2 "      -a, --all             Deletes all locally persisted data from"
+  echo >&2 "                            HOST_DATA_DIR (current value '${HOME}/.local/arvie/${ARVIE_ENV}/data')"
+  echo >&2 "      -c, --cache           Deletes the gem/pip/npm cache completely"
+  echo >&2 "                            WARNING!!!! This will impact in all your existing clusters, as the cache"
+  echo >&2 "                              directory is common to all running Arvie clusters"
+  echo >&2
+  echo >&2 "  * compose: Passes the arguments it receives verbatim to 'docker-compose'"
+  echo >&2
+  echo >&2 "    Usage: ${COMMAND} compose [arguments to docker-compose]"
+  echo >&2
+  echo >&2 "    compose options:"
+  echo >&2 "      -t, --tag <TAG>       Image <TAG> to use/invoke."
+  echo >&2 "                            Defaults to 'latest' (current value: ${TAG})"
+  echo >&2 "      [argumentsN]          The rest of the arguments will be passed verbatim to docker-compose"
+  echo >&2
 }
 
-AVAILABLE_COMMANDS=$(ls commands | grep -v README.rst)
+# Set some defaults, based on whether some ENV vars are set
+### ENVIRONMENT DIR TO USE
+[ -z "${ARVIE_ENV:-}" ] && ARVIE_ENV=arvie
+### CLUSTER NAME TO USE
+[ -z "${ARVIE_CLUSTER:-}" ] && ARVIE_CLUSTER=arvie
 
-# For less than 2 parameters (cluster, command), we show usage and exit
-if [ "x${1:-}" = "x-h" -o "x${1:-}" = "x--help" -o $# -lt 2 ]; then
-  usage
+# These are based on the XDG standard
+# https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+### BASE DIR TO PERSIST DATA
+[ -z "${ARVIE_DATA:-}" ] && ARVIE_DATA="${HOME}/.local/arvie/${ARVIE_ENV}"
+
+### BASE DIR TO PERSIST CONFIGS
+[ -z "${ARVIE_CONFIG:-}" ] && ARVIE_CONFIG="${HOME}/.config/arvie/${ARVIE_ENV}"
+
+TAG="latest"
+IMAGES_TO_BUILD=""
+COMMAND_LINE=""
+CACHE="no"
+
+SED=""
+SCAFFOLD="template1"
+DOMAIN="arv.local"
+
+# FIXME
+# getip() {
+#   docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $ARVIE_ENV
+# }
+# getclusterid() {
+#   docker exec $ARVIE_ENV cat $ARVADOS_CLUSTER_PATH/api_uuid_prefix
+# }
+# listusers() {
+#   docker exec -ti $ARVIE_ENV /usr/local/lib/arvie/edit_users.py $ARVADOS_CLUSTER_PATH/cluster_config.yml $(getclusterid) list
+# }
+# wait_for_arvie() { }
+# running_config() { }
+# run() { }
+# stop() { }
+
+arguments() {
+  # NOTE: This requires GNU getopt (part of the util-linux package on Debian-based distros).
+  if ! TEMP=$(getopt -o acd:hn:s:t:v: \
+    --long all,cache,domain:,help,name:,scaffold:,tag:,var: \
+    -n "$0" -- "${@}"); then
+    usage
+    exit 1
+  fi
+
+  # Note the quotes around '$TEMP': they are essential!
+  eval set -- "$TEMP"
+
+  while [ $# -ge 1 ]; do
+    case $1 in
+      -a | --all)
+        ALL="yes"
+        shift
+        ;;
+      -c | --cache)
+        CACHE="yes"
+        shift
+        ;;
+      -d | --domain)
+        DOMAIN=${2}
+        shift 2
+        ;;
+      -n | --name)
+        ARVIE_CLUSTER=${2}
+        shift 2
+        ;;
+      -s | --scaffold)
+        SCAFFOLD=${2}
+        shift 2
+        ;;
+      -t | --tag)
+        TAG=${2}
+        shift 2
+        ;;
+      -v | --var)
+        # process the vars to do the replacements in the templates
+        [ "x${SED}" != "x" ] && SED="${SED};"
+        SN=$(echo "${2}" | cut -f 1 -d "=")
+        SV=$(echo "${2}" | cut -f 2 -d "=")
+        SED="${SED} s/__${SN}__/${SV}/g"
+        shift 2
+        ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+    esac
+  done
+}
+
+############ BUILD SECTION ##################
+build() {
+  if [ "${CACHE}" = "yes" ] || [ ! -d "${HOST_CACHE_DIR}" ]; then
+    echo FIXME!!!!! source commands/prepare
+  fi
+
+  # Get the commit and branch to add them to the /BUILD_INFO file
+  # so we know which commit/branch we're building from
+  cd "${ARVADOS_ROOT}"
+  BUILD_COMMIT=$(git rev-parse --short HEAD)
+  BUILD_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  cd -
+
+  cat > "${HOST_CONF_BUILD}/LAST_BUILD_INFO" << EOF
+  BUILD_BRANCH="${BUILD_BRANCH}"
+  BUILD_COMMIT="${BUILD_COMMIT}"
+  BUILD_TAG="${TAG}"
+EOF
+
+  echo "Building ${ARVIE_ENV}/${ARVIE_CLUSTER} Arvados' images"
+  ${DBGCMD} COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 BUILD_TAG="${TAG}" docker-compose \
+    --env-file ${ARVIE_ENV}/compose/compose.env \
+    --file ${ARVIE_ENV}/compose/build.yml \
+    --log-level DEBUG \
+    build ${IMAGES_TO_BUILD}
+}
+
+############ ENV SECTION ##################
+load_compose_env() {
+  if [ ! -d "${ARVIE_CONFIG}" ]; then
+    echo >&2
+    echo >&2 "${ARVIE_ENV} environment dirs for cluster ${ARVIE_CLUSTER} are missing."
+    echo >&2
+    echo >&2 "Please create them with"
+    echo >&2 "  ${COMMAND} env"
+    echo >&2
+    echo >&2 "Run '${COMMAND} --help' to get the valid parameters and variables"
+    echo >&2
+    exit 1
+  else
+    # We use the docker-compose's .env file to configure arvie
+    # shellcheck source=/dev/null
+    source "${ARVIE_CONFIG}/compose/compose.env"
+  fi
+}
+
+prepare_arvie_env() {
+  # FIXME! We should remove this and let the user say where is the Arvados code
+  if [ -f "${ARVIEPATH}/arvados/CODE_OF_CONDUCT.md" ]; then
+    echo >&2 "Arvados repository already exists. Skipping"
+  else
+    echo >&2 "Downloading Arvados into the '${ARVIEPATH}/arvados/' subdir"
+    cd "${ARVIEPATH}"
+    ${DBGCMD} git submodule update --init
+    ${DBGCMD} git submodule update --checkout
+    cd -
+  fi
+
+  if [ -d "${HOST_GEMCACHE}" ] && [ -d "${HOST_GOCACHE}" ] && [ -d "${HOST_PIPCACHE}" ] && [ -d "${HOST_NPMCACHE}" ]; then
+    echo >&2 "Arvie cache directories already exist. Skipping"
+  else
+    # Create the cache dirs to speed up later runs
+    echo >&2 "Creating Arvie's cache directories"
+    ${DBGCMD} mkdir -p "${HOST_GEMCACHE}" "${HOST_GOCACHE}" "${HOST_PIPCACHE}" "${HOST_NPMCACHE}"
+
+    echo >&2 "Building the NPM, Ruby gems and Golang caches"
+    ${DBGCMD} COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose \
+      --env-file "${ARVIE_ENV}/compose/compose.env" \
+      --file "${ARVIE_ENV}/cache.yml" \
+      up --remove-orphans gem-cache
+
+    echo >&2 "Tearing down the images used to build the cache"
+    ${DBGCMD} docker-compose \
+      --env-file "${ARVIE_ENV}/compose/compose.env" \
+      --file "${ARVIE_ENV}/cache.yml" down
+  fi
+}
+
+create_env() {
+  if [ -d "${ARVIE_CONFIG}" ]; then
+    echo "The ${ARVIE_CONFIG} directory already exists. Skipping"
+  else
+    # Add the final replacement strings
+    [ "x${SED}" != "x" ] && SED="${SED};"
+    SED="${SED} s/__CLUSTER__/${ARVIE_CLUSTER}/g; s/__DOMAIN__/${DOMAIN}/g"
+    echo "SED LINE: $SED"
+
+    # Do the job
+    echo "Cloning template ${SCAFFOLD} to ${ARVIE_CONFIG}"
+    ${DBGCMD} mkdir -pv "${ARVIE_CONFIG}"
+    ${DBGCMD} mkdir -pv "${ARVIE_DATA}"
+    ${DBGCMD} cp -r "${ARVIEPATH}/scaffold/${SCAFFOLD}" "${ARVIE_CONFIG}"
+
+    echo "Replacing vars in ${ARVIE_ENV}"
+    ${DBGCMD} find "${ARVIE_CONFIG}" -type f -exec sed -i "${SED}" {} \;
+  fi
+
+  if [ -f "${HOST_CONF_DIR}/ssl/server.key" ]; then
+    echo "The snakeoil cert already exists for cluster ${ARVIE_CLUSTER}. Skipping"
+  else
+    echo "Generating SSL certs for Postgresql and nginx under ${HOST_CONF_DIR}/ssl"
+    mkdir -p "${HOST_CONF_DIR}/ssl"
+    openssl req -new \
+      -text \
+      -passout pass:abcd \
+      -subj /CN=localhost \
+      -out "${HOST_CONF_DIR}/ssl/server.req" \
+      -keyout "${HOST_CONF_DIR}/ssl/privkey.pem"
+    openssl rsa -in "${HOST_CONF_DIR}/ssl/privkey.pem" \
+      -passin pass:abcd \
+      -out "${HOST_CONF_DIR}/ssl/server.key"
+    openssl req -x509 \
+      -in "${HOST_CONF_DIR}/ssl/server.req -text" \
+      -key "${HOST_CONF_DIR}/ssl/server.key" \
+      -out "${HOST_CONF_DIR}/ssl/server.crt"
+    # FIXME! Remove this and make postgresql work without SSL?
+    # https://github.com/docker-library/docs/blob/master/postgres/README.md#arbitrary---user-notes
+    chmod 600 "${HOST_CONF_DIR}/ssl/server.key"
+    test "$(uname -s)" == "Linux" && sudo chown 70 "${HOST_CONF_DIR}/ssl/server.key"
+  fi
+}
+
+########## CLEAN SECTION ##################
+clean() {
+  # Clean stuff lingering around so we can reset everything
+  cd "${ARVADOS_ROOT}" || exit 1
+
+  echo "FIXME! Removing PID files. This is an issue with multiple clusters!!!!"
+  echo sudo rm -vf apps/workbench/tmp/pids/server.pid services/api/tmp/pids/server.pid
+
+  echo "FIXME! resetting db files, modified by api on startup. This is an issue with multiple clusters!!!!"
+  echo git checkout -- apps/workbench/db/schema.rb services/api/db/structure.sql
+  cd "${BASE_DIR}"
+
+  if [ "${ALL}" = "yes" ]; then
+    echo "Removing all locally persisted data"
+    ${DBGCMD} sudo rm -rvf "${HOST_DATA_DIR}"
+  fi
+
+  if [ "${CACHE}" = "yes" ]; then
+    echo "Removing all CACHE data"
+    ${DBGCMD} sudo rm -rvf "${HOST_CACHE_DIR}"
+  fi
+}
+
+########## CLEAN SECTION ##################
+compose() {
+  echo "Running docker-compose"
+  ${DBGCMD} BUILD_TAG="${TAG}" docker-compose \
+    --file "${CLUSTER}/base.yml" \
+    --log-level DEBUG ${COMMAND_LINE}
+
+}
+
+########### MAIN SECTION ##################
+# Parse the arguments
+arguments ${@}
+
+if [ ${#ARVIE_CLUSTER} -ne 5 ]; then
+  echo >&2 "ERROR: <ARVIE_CLUSTER> must be exactly 5 characters long"
+  echo >&2 "Run './${COMMAND} --help' to get the valid parameters and variables"
   exit 1
 fi
 
-# First parameter must be the cluster. The rest, the command and parameters
-if [ ${#1} -ne 5 ]; then
-  echo "ERROR: <CLUSTER> must be exactly 5 characters long"
-  usage
-  exit 1
-fi
-CLUSTER=${1}
-shift
-COMMAND=${1}
-shift
-PARAMETERS=$@
+subcmd="${1:-}"
+[ -n "${subcmd}" ] && shift
 
-# Prepare the line to pass to the commands
-case "x${COMMAND}" in
-  "xup")
-    # We need the caches and certs in place to start the service
-    ./commands/prepare ${CLUSTER}
-    COMMAND_LINE="compose ${CLUSTER} ${COMMAND} ${PARAMETERS}"
+case "${subcmd}" in
+  build)
+    load_compose_env
+    IMAGES_TO_BUILD=${@}
+    build ${IMAGES_TO_BUILD}
     ;;
-  "xdown")
-    COMMAND_LINE="compose ${CLUSTER} ${COMMAND} ${PARAMETERS}"
+  clean)
+    load_compose_env
+    clean
+    ;;
+  compose)
+    load_compose_env
+    COMMAND_LINE=${@}
+    ${DBGCMD} compose ${COMMAND_LINE}
+    ;;
+  env)
+    create_env
+    ;;
+  prepare)
+    load_compose_env
+    prepare_arvie_env
+    ;;
+  up)
+    load_compose_env
+    COMMAND_LINE=${@}
+    ${DBGCMD} compose ${COMMAND_LINE} up
+    ;;
+  down)
+    load_compose_env
+    COMMAND_LINE=${@}
+    ${DBGCMD} compose ${COMMAND_LINE} down
     ;;
   *)
-    COMMAND_LINE="${COMMAND} ${CLUSTER} ${PARAMETERS}"
+    usage
     ;;
 esac
-
-echo "Running: ${COMMAND} ${PARAMETERS} on cluster ${CLUSTER}"
-./commands/${COMMAND_LINE}
