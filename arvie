@@ -274,13 +274,14 @@ create_env() {
     # Add the final replacement strings
     [ "x${SED}" != "x" ] && SED="${SED};"
     SED="${SED} s/__CLUSTER__/${ARVIE_CLUSTER_NAME}/g; s/__DOMAIN__/${DOMAIN}/g; s#__BASE_DATA_DIR__#${ARVIE_DATA}#g; s#__BASE_CONF_DIR__#${ARVIE_CONFIG}#g"
-    echo "SED LINE: $SED"
 
     # Do the job
-    echo "Cloning template ${SCAFFOLD} to ${ARVIE_CONFIG}"
+    echo "Creating config directory for ${ARVIE_CLUSTER_NAME} under ${ARVIE_CONFIG}"
     ${DBGCMD} mkdir -pv "${ARVIE_CONFIG}"
+    echo "Creating persistent storage directory for ${ARVIE_CLUSTER_NAME} under ${ARVIE_DATA}"
     ${DBGCMD} mkdir -pv "${ARVIE_DATA}"
-    ${DBGCMD} cp -r "${ARVIE_PATH}/scaffold/${SCAFFOLD}" "${ARVIE_CONFIG}"
+    echo "Cloning template ${SCAFFOLD} to ${ARVIE_CONFIG}"
+    ${DBGCMD} cp -r "${ARVIE_PATH}/scaffold/${SCAFFOLD}"/* "${ARVIE_CONFIG}/"
 
     echo "Replacing vars in ${ARVIE_CLUSTER_ENV}"
     ${DBGCMD} find "${ARVIE_CONFIG}" -type f -exec sed -i "${SED}" {} \;
