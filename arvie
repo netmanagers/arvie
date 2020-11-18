@@ -273,7 +273,7 @@ create_env() {
   else
     # Add the final replacement strings
     [ "x${SED}" != "x" ] && SED="${SED};"
-    SED="${SED} s/__CLUSTER__/${ARVIE_CLUSTER_NAME}/g; s/__DOMAIN__/${DOMAIN}/g; s/__BASE_DATA_DIR__/${ARVIE_DATA}/g; s/__BASE_CONF_DIR__/${ARVIE_CONFIG}/g"
+    SED="${SED} s/__CLUSTER__/${ARVIE_CLUSTER_NAME}/g; s/__DOMAIN__/${DOMAIN}/g; s#__BASE_DATA_DIR__#${ARVIE_DATA}#g; s#__BASE_CONF_DIR__#${ARVIE_CONFIG}#g"
     echo "SED LINE: $SED"
 
     # Do the job
