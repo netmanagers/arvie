@@ -6,8 +6,8 @@ COMMAND=$(basename "${0}")
 
 ARVIE_PATH=$(dirname "${0}")
 
-DBGCMD="echo   ----> "
-# DBGCMD=""
+DBGCMD=""
+# DBGCMD="echo   ----> "
 
 usage() {
   echo >&2 "Arvie runs Arvados with docker-compose https://github.com/netmanagers/arvie"
@@ -208,7 +208,7 @@ build() {
   BUILD_TAG="${TAG}"
 EOF
 
-  echo "Building ${ARVIE_CLUSTER_ENV}/${ARVIE_CLUSTER_NAME} Arvados' images"
+  echo "Building ${ARVIE_CLUSTER_ENV} ${ARVIE_CLUSTER_NAME} Arvados' images"
   ${DBGCMD} COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 BUILD_TAG="${TAG}" docker-compose \
     --env-file ${ARVIE_CLUSTER_ENV}/compose/compose.env \
     --file ${ARVIE_CLUSTER_ENV}/compose/build.yml \
@@ -273,7 +273,7 @@ create_env() {
   else
     # Add the final replacement strings
     [ "x${SED}" != "x" ] && SED="${SED};"
-    SED="${SED} s/__CLUSTER__/${ARVIE_CLUSTER_NAME}/g; s/__DOMAIN__/${DOMAIN}/g"
+    SED="${SED} s/__CLUSTER__/${ARVIE_CLUSTER_NAME}/g; s/__DOMAIN__/${DOMAIN}/g; s/__BASE_DATA_DIR__/${ARVIE_DATA}/g; s/__BASE_CONF_DIR__/${ARVIE_CONFIG}/g"
     echo "SED LINE: $SED"
 
     # Do the job
