@@ -18,7 +18,7 @@ x-volumes-cache-pip: &volumes-cache-pip
 x-volumes-flags: &volumes-flags
   ${ARVBOX_FLAGS}:/arvados/flags
 x-volumes-scripts: &volumes-scripts
-  ${PWD}/scripts:/scripts
+  ${HOST_SCRIPTS_DIR}:/scripts
 x-volumes-docker-sock: &volumes-docker-sock
   /var/run/docker.sock:/var/run/docker.sock
 x-volumes-docker-bin: &volumes-docker-bin

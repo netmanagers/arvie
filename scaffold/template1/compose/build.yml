@@ -10,13 +10,13 @@ x-build_tag: &build_tag
 
 ### GOAPP BUILD DEFAULT PARAMETERS
 x-goapp_build_defaults: &goapp_build_defaults
-  context: ../
-  dockerfile: dockerfiles/Dockerfile.goapp
+  context: ${ARVIE_BASE_DIR}/
+  dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.goapp
 
 ### RAILS BUILD DEFAULT PARAMETERS
 x-rails_build_defaults: &rails_build_defaults
-  context: ../
-  dockerfile: dockerfiles/Dockerfile.rails
+  context: ${ARVIE_BASE_DIR}/
+  dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.rails
 
 ### ARVADOS-SERVER BUILD
 x-arvados_server_build: &arvados_server_build
@@ -102,7 +102,7 @@ services:
     image: nmarvie/crunch-dispatch-local:${BUILD_TAG}
     build:
       <<: *goapp_build_defaults
-      dockerfile: dockerfiles/Dockerfile.goapp.crunch-dispatch-local
+      dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.goapp.crunch-dispatch-local
       args:
         <<: *build_tag
         APP_DIR: services
@@ -167,8 +167,8 @@ services:
   shell:
     image: nmarvie/shell:${BUILD_TAG}
     build:
-      context: ../
-      dockerfile: dockerfiles/Dockerfile.shell
+      context: ${ARVIE_BASE_DIR}/
+      dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.shell
       args:
         <<: *build_tag
         RUBY_IMAGE: ${RUBY_IMAGE}
@@ -180,8 +180,8 @@ services:
   compute:
     image: nmarvie/compute:${BUILD_TAG}
     build:
-      context: ../
-      dockerfile: dockerfiles/Dockerfile.compute
+      context: ${ARVIE_BASE_DIR}/
+      dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.compute
       args:
         <<: *build_tag
         COMPUTE_IMAGE: ${COMPUTE_IMAGE}
