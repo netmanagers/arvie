@@ -38,9 +38,21 @@ usage() {
   echo >&2
   echo >&2 "Commands and options:"
   echo >&2
+  echo >&2 "  * up: Starts an Arvados cluster. This is a shortcut to '${COMMAND} compose up'"
+  echo >&2
+  echo >&2 "    Usage: ${COMMAND} up [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
+  echo >&2
+  echo >&2 "    up options: See 'compose' below."
+  echo >&2
+  echo >&2 "  * down: Stops an Arvados cluster. This is a shortcut to '${COMMAND} compose down'"
+  echo >&2
+  echo >&2 "    Usage: ${COMMAND} down [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
+  echo >&2
+  echo >&2 "    down options: See 'compose' below."
+  echo >&2
   echo >&2 "  * build: Builds local docker images of Arvados' components, from the Arvados subdir"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} build [-t|--tag TAG] [component1] [component2] ..."
+  echo >&2 "    Usage: ${COMMAND} build [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
   echo >&2
   echo >&2 "    build options:"
   echo >&2 "      -c, --cache           Rebuild the gem/pip/npm cache before building any image"
@@ -82,12 +94,12 @@ usage() {
   echo >&2
   echo >&2 "  * compose: Passes the arguments it receives verbatim to 'docker-compose'"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} compose [arguments to docker-compose]"
+  echo >&2 "    Usage: ${COMMAND} compose compose-command -- [arguments to docker-compose]"
   echo >&2
   echo >&2 "    compose options:"
   echo >&2 "      -t, --tag <TAG>       Image <TAG> to use/invoke."
   echo >&2 "                            Defaults to 'latest' (current value: ${TAG})"
-  echo >&2 "      [argumentsN]          The rest of the arguments will be passed verbatim to docker-compose"
+  echo >&2 "      [argumentsN]          The rest of the arguments after the '--' will be passed verbatim to docker-compose"
   echo >&2
   current_env
 }
@@ -102,10 +114,9 @@ usage() {
 [ -z "${ARVIE_CONFIG_DIR:-}" ] && ARVIE_CONFIG_DIR="${HOME}/.config/arvie"
 
 TAG="latest"
-IMAGES_TO_BUILD=""
-COMMAND_LINE=""
+COMMAND_PARAMETERS=""
 CACHE="no"
-
+ALL="no"
 SED=""
 SCAFFOLD="template1"
 DOMAIN="arv.local"
@@ -169,6 +180,11 @@ arguments() {
         exit 0
         ;;
       -n | --name)
+        if [ ${#2} -ne 5 ]; then
+          echo >&2 "ERROR: <ARVIE_CLUSTER> must be exactly 5 alphanumeric characters long"
+          echo >&2 "Run './${COMMAND} --help' to get the valid parameters and variables"
+          exit 1
+        fi
         ARVIE_CLUSTER_NAME=${2}
         shift 2
         ;;
@@ -194,6 +210,11 @@ arguments() {
         ;;
     esac
   done
+
+  SUB_COMMAND="${1:-}"
+  [ -n "${SUB_COMMAND}" ] && shift
+
+  COMMAND_PARAMETERS="${@}"
 }
 
 ############ BUILD SECTION ##################
@@ -220,7 +241,7 @@ EOF
     --env-file "${ARVIE_CONFIG}/compose/compose.env" \
     --file "${ARVIE_CONFIG}/compose/build.yml" \
     --log-level DEBUG \
-    build ${IMAGES_TO_BUILD}
+    build ${@}
 }
 
 ############ ENV SECTION ##################
@@ -242,7 +263,7 @@ load_compose_env() {
   fi
 }
 
-prepare_arvie_env() {
+prepare_arvie_common_cache() {
   # FIXME! We should remove this and let the user say where is the Arvados code
   if [ -f "${ARVIE_PATH}/arvados/CODE_OF_CONDUCT.md" ]; then
     echo >&2 "Arvados repository already exists. Skipping"
@@ -279,6 +300,8 @@ prepare_arvie_env() {
 }
 
 create_env() {
+  # Create an Arvie environment to store configs and data for the cluster/s
+
   if [ -d "${ARVIE_CONFIG}" ]; then
     echo "The ${ARVIE_CONFIG} directory already exists. Skipping"
   else
@@ -305,44 +328,51 @@ create_env() {
   fi
 }
 
-# FIXME! Remove this and make postgresql work without SSL?
-create_postgresql_ssl_cert() {
-  if [ -f "${HOST_CONF_DIR}/ssl/server.key" ]; then
-    echo "The snakeoil cert already exists for cluster ${ARVIE_CLUSTER_NAME}. Skipping"
-  else
-    echo "Generating SSL certs for Postgresql and nginx under ${HOST_CONF_DIR}/ssl"
-    mkdir -p "${HOST_CONF_DIR}/ssl"
-    openssl req -new \
-      -text \
-      -passout pass:abcd \
-      -subj /CN=localhost \
-      -out "${HOST_CONF_DIR}/ssl/server.req" \
-      -keyout "${HOST_CONF_DIR}/ssl/privkey.pem"
-    openssl rsa -in "${HOST_CONF_DIR}/ssl/privkey.pem" \
-      -passin pass:abcd \
-      -out "${HOST_CONF_DIR}/ssl/server.key"
-    openssl req -x509 \
-      -in "${HOST_CONF_DIR}/ssl/server.req -text" \
-      -key "${HOST_CONF_DIR}/ssl/server.key" \
-      -out "${HOST_CONF_DIR}/ssl/server.crt"
-    # FIXME! Remove this and make postgresql work without SSL?
-    # https://github.com/docker-library/docs/blob/master/postgres/README.md#arbitrary---user-notes
-    chmod 600 "${HOST_CONF_DIR}/ssl/server.key"
-    test "$(uname -s)" == "Linux" && sudo chown 70 "${HOST_CONF_DIR}/ssl/server.key"
-  fi
+create_ssl_certs() {
+  # Create the certs for the different VHosts and PG
+
+  for CN in postgres keep keep0 collections download ws workbench workbench2; do
+    CN_FQDN="${CN}.${ARVIE_CLUSTER_NAME}.${DOMAIN}"
+    if [ -f "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key" ]; then
+      echo "The snakeoil SSL cert for ${CN_FQDN} already exists. Skipping"
+    else
+      echo "Generating SSL cert for ${CN_FQDN} under ${HOST_CONF_DIR}/ssl"
+      mkdir -p "${HOST_CONF_DIR}/ssl"
+      openssl req -new \
+        -text \
+        -passout "pass:abcd" \
+        -subj "/CN=${CN_FQDN}" \
+        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.req" \
+        -keyout "${HOST_CONF_DIR}/ssl/${CN_FQDN}privkey.pem"
+      openssl rsa -in "${HOST_CONF_DIR}/ssl/${CN_FQDN}privkey.pem" \
+        -passin pass:abcd \
+        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
+      openssl req -x509 \
+        -text \
+        -in "${HOST_CONF_DIR}/ssl/${CN_FQDN}.req" \
+        -key "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key" \
+        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.crt"
+      chmod 600 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
+
+      # FIXME! Remove this and make postgresql work without SSL?
+      # https://github.com/docker-library/docs/blob/master/postgres/README.md#arbitrary---user-notes
+      [ "${CN}" == "postgres" ] && [ "$(uname -s)" == "Linux" ] && sudo chown 70 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
+    fi
+  done
 }
 
 ########## CLEAN SECTION ##################
 clean() {
   # Clean stuff lingering around so we can reset everything
-  cd "${ARVADOS_ROOT}" || exit 1
 
   echo "FIXME! Removing PID files. This is an issue with multiple clusters!!!!"
-  echo sudo rm -vf apps/workbench/tmp/pids/server.pid services/api/tmp/pids/server.pid
+  sudo rm -vf apps/workbench/tmp/pids/server.pid services/api/tmp/pids/server.pid
 
   echo "FIXME! resetting db files, modified by api on startup. This is an issue with multiple clusters!!!!"
-  echo git checkout -- apps/workbench/db/schema.rb services/api/db/structure.sql
-  cd "${BASE_DIR}"
+  (
+    cd "${ARVADOS_ROOT}" || exit 1
+    git checkout -- apps/workbench/db/schema.rb services/api/db/structure.sql
+  )
 
   if [ "${ALL}" = "yes" ]; then
     echo "Removing all locally persisted data"
@@ -355,14 +385,14 @@ clean() {
   fi
 }
 
-########## CLEAN SECTION ##################
+########## COMPOSE SECTION ##################
 compose() {
-  COMPOSE_COMMANDS=${@}
   echo "Running docker-compose"
   BUILD_TAG="${TAG}" docker-compose \
     --env-file "${ARVIE_CONFIG}/compose/compose.env" \
     --file "${ARVIE_CONFIG}/compose/base.yml" \
-    --log-level DEBUG ${COMPOSE_COMMANDS}
+    ${@}
+    # --log-level DEBUG ${@}
 
 }
 
@@ -370,48 +400,35 @@ compose() {
 # Parse the arguments
 arguments ${@}
 
-if [ ${#ARVIE_CLUSTER_NAME} -ne 5 ]; then
-  echo >&2 "ERROR: <ARVIE_CLUSTER> must be exactly 5 characters long"
-  echo >&2 "Run './${COMMAND} --help' to get the valid parameters and variables"
-  exit 1
-fi
-
-subcmd="${1:-}"
-[ -n "${subcmd}" ] && shift
-
-case "${subcmd}" in
+case "${SUB_COMMAND}" in
   build)
     load_compose_env
-    IMAGES_TO_BUILD=${@}
-    build ${IMAGES_TO_BUILD}
+    ${SUB_COMMAND} ${COMMAND_PARAMETERS}
     ;;
   clean)
     load_compose_env
-    clean
+    ${SUB_COMMAND}
     ;;
   compose)
     load_compose_env
-    create_postgresql_ssl_cert
-    COMMAND_LINE=${@}
-    compose ${COMMAND_LINE}
+    echo create_ssl_certs
+    ${SUB_COMMAND} ${COMMAND_PARAMETERS}
     ;;
   env)
     create_env
     ;;
   prepare)
     load_compose_env
-    prepare_arvie_env
+    prepare_arvie_common_cache
     ;;
   up)
     load_compose_env
-    create_postgresql_ssl_cert
-    COMMAND_LINE=${@}
-    compose ${COMMAND_LINE} up
+    create_ssl_certs
+    compose up ${COMMAND_PARAMETERS}
     ;;
   down)
     load_compose_env
-    COMMAND_LINE=${@}
-    compose ${COMMAND_LINE} down
+    compose down ${COMMAND_PARAMETERS}
     ;;
   *)
     usage
