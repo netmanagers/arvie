@@ -36,8 +36,8 @@ services:
     volumes:
       - ${PG_DATA}:/var/lib/postgresql/data
       - ${HOST_SCRIPTS_DIR}/postgresql:/docker-entrypoint-initdb.d
-      - ${HOST_CONF_DIR}/ssl/server.crt:/var/lib/postgresql/server.crt:ro
-      - ${HOST_CONF_DIR}/ssl/server.key:/var/lib/postgresql/server.key:ro
+      - ${HOST_CONF_DIR}/ssl/database.${CLUSTER}.${DOMAIN}.crt:/var/lib/postgresql/server.crt:ro
+      - ${HOST_CONF_DIR}/ssl/database.${CLUSTER}.${DOMAIN}.key:/var/lib/postgresql/server.key:ro
     # yamllint disable-line rule:line-length
     command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key -c log_statement=all
     # yamllint enable-line rule:line-length

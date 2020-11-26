@@ -40,66 +40,66 @@ usage() {
   echo >&2
   echo >&2 "  * up: Starts an Arvados cluster. This is a shortcut to '${COMMAND} compose up'"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} up [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
+  echo >&2 "        Usage: ${COMMAND} up [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
   echo >&2
-  echo >&2 "    up options: See 'compose' below."
+  echo >&2 "        up options: See 'compose' below."
   echo >&2
   echo >&2 "  * down: Stops an Arvados cluster. This is a shortcut to '${COMMAND} compose down'"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} down [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
+  echo >&2 "        Usage: ${COMMAND} down [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
   echo >&2
-  echo >&2 "    down options: See 'compose' below."
+  echo >&2 "        down options: See 'compose' below."
   echo >&2
   echo >&2 "  * build: Builds local docker images of Arvados' components, from the Arvados subdir"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} build [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
+  echo >&2 "        Usage: ${COMMAND} build [-t|--tag TAG] [component1] [component2] ... -- [docker-compose --parameters]"
   echo >&2
-  echo >&2 "    build options:"
-  echo >&2 "      -c, --cache           Rebuild the gem/pip/npm cache before building any image"
-  echo >&2 "      -t, --tag <TAG>       Add the <TAG> value in a /BUILD_INFO file inside the running image"
-  echo >&2 "                             and also use it as an image tag, to be able to build/use different"
-  echo >&2 "                             versions of the different components, mostly for development/testing"
-  echo >&2 "      [componentN]          Image to build/rebuild. Defaults to all of them"
+  echo >&2 "        build options:"
+  echo >&2 "          -c, --cache           Rebuild the gem/pip/npm cache before building any image"
+  echo >&2 "          -t, --tag <TAG>       Add the <TAG> value in a /BUILD_INFO file inside the running image"
+  echo >&2 "                                 and also use it as an image tag, to be able to build/use different"
+  echo >&2 "                                 versions of the different components, mostly for development/testing"
+  echo >&2 "          [componentN]          Image to build/rebuild. Defaults to all of them"
   echo >&2
   echo >&2 "  * env: Prepares and manages Arvie environments to run clusters"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} create [-s|--scaffold SCAFFOLD] [-n|--name NAME] [-d|--domain DOMAIN] [-v|--var VAR1=value] [-v|--var VAR2=value2] [-v|--var VARN=valueN]"
+  echo >&2 "        Usage: ${COMMAND} create [-s|--scaffold SCAFFOLD] [-n|--name NAME] [-d|--domain DOMAIN] [-v|--var VAR1=value] [-v|--var VAR2=value2] [-v|--var VARN=valueN]"
   echo >&2
-  echo >&2 "    create options:"
-  echo >&2 "      -n, --name            A unique 5 letters word to use as the Arvados' cluster name"
-  echo >&2 "                            Defaults to \$ARVIE_CLUSTER (current value: ${ARVIE_CLUSTER_NAME})"
-  echo >&2 "      -s, --scaffold        One of the templates from the 'scaffold' dir"
-  echo >&2 "                              which will be used to create the new cluster config"
-  echo >&2 "                            Defaults to 'template1'"
-  echo >&2 "      -d, --domain DOMAIN   The domain you want to use for your cluster. Defaults to arv.local"
-  echo >&2 "      -v, --var VAR=value   KEY=value pairs to use in a sed replacement over the selected template"
+  echo >&2 "        create options:"
+  echo >&2 "          -n, --name            A unique 5 letters word to use as the Arvados' cluster name"
+  echo >&2 "                                Defaults to \$ARVIE_CLUSTER (current value: ${ARVIE_CLUSTER_NAME})"
+  echo >&2 "          -s, --scaffold        One of the templates from the 'scaffold' dir"
+  echo >&2 "                                  which will be used to create the new cluster config"
+  echo >&2 "                                Defaults to 'template1'"
+  echo >&2 "          -d, --domain DOMAIN   The domain you want to use for your cluster. Defaults to arv.local"
+  echo >&2 "          -v, --var VAR=value   KEY=value pairs to use in a sed replacement over the selected template"
   echo >&2
   echo >&2 "  * prepare: Prepares Arvie's environment, populating the Arvados submodule dir and creating the cache."
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} prepare"
+  echo >&2 "        Usage: ${COMMAND} prepare"
   echo >&2
-  echo >&2 "           If all requirements are already fulfilled, it will do nothing."
-  echo >&2 "           Otherwise, will create any of the missing ones."
+  echo >&2 "               If all requirements are already fulfilled, it will do nothing."
+  echo >&2 "               Otherwise, will create any of the missing ones."
   echo >&2
   echo >&2 "  * clean: Deletes lingering Arvados files () or all data, if desired"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} clean [-a|--all]"
+  echo >&2 "        Usage: ${COMMAND} clean [-a|--all]"
   echo >&2
-  echo >&2 "    clean options:"
-  echo >&2 "      -a, --all             Deletes all locally persisted data from"
-  echo >&2 "                            HOST_DATA_DIR (current value '${HOME}/.local/arvie/${ARVIE_CLUSTER_ENV}/data')"
-  echo >&2 "      -c, --cache           Deletes the gem/pip/npm cache completely"
-  echo >&2 "                            WARNING!!!! This will impact in all your existing clusters, as the cache"
-  echo >&2 "                              directory is common to all running Arvie clusters"
+  echo >&2 "        clean options:"
+  echo >&2 "          -a, --all             Deletes all locally persisted data from"
+  echo >&2 "                                HOST_DATA_DIR (current value '${HOME}/.local/arvie/${ARVIE_CLUSTER_ENV}/data')"
+  echo >&2 "          -c, --cache           Deletes the gem/pip/npm cache completely"
+  echo >&2 "                                WARNING!!!! This will impact in all your existing clusters, as the cache"
+  echo >&2 "                                  directory is common to all running Arvie clusters"
   echo >&2
   echo >&2 "  * compose: Passes the arguments it receives verbatim to 'docker-compose'"
   echo >&2
-  echo >&2 "    Usage: ${COMMAND} compose compose-command -- [arguments to docker-compose]"
+  echo >&2 "        Usage: ${COMMAND} compose compose-command -- [arguments to docker-compose]"
   echo >&2
-  echo >&2 "    compose options:"
-  echo >&2 "      -t, --tag <TAG>       Image <TAG> to use/invoke."
-  echo >&2 "                            Defaults to 'latest' (current value: ${TAG})"
-  echo >&2 "      [argumentsN]          The rest of the arguments after the '--' will be passed verbatim to docker-compose"
+  echo >&2 "        compose options:"
+  echo >&2 "          -t, --tag <TAG>       Image <TAG> to use/invoke."
+  echo >&2 "                                Defaults to 'latest' (current value: ${TAG})"
+  echo >&2 "          [argumentsN]          The rest of the arguments after the '--' will be passed verbatim to docker-compose"
   echo >&2
   current_env
 }
@@ -331,7 +331,7 @@ create_env() {
 create_ssl_certs() {
   # Create the certs for the different VHosts and PG
 
-  for CN in postgres keep keep0 collections download ws workbench workbench2; do
+  for CN in database keep keep0 collections download ws workbench workbench2; do
     CN_FQDN="${CN}.${ARVIE_CLUSTER_NAME}.${DOMAIN}"
     if [ -f "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key" ]; then
       echo "The snakeoil SSL cert for ${CN_FQDN} already exists. Skipping"
@@ -343,8 +343,8 @@ create_ssl_certs() {
         -passout "pass:abcd" \
         -subj "/CN=${CN_FQDN}" \
         -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.req" \
-        -keyout "${HOST_CONF_DIR}/ssl/${CN_FQDN}privkey.pem"
-      openssl rsa -in "${HOST_CONF_DIR}/ssl/${CN_FQDN}privkey.pem" \
+        -keyout "${HOST_CONF_DIR}/ssl/${CN_FQDN}.privkey.pem"
+      openssl rsa -in "${HOST_CONF_DIR}/ssl/${CN_FQDN}.privkey.pem" \
         -passin pass:abcd \
         -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
       openssl req -x509 \
@@ -356,7 +356,9 @@ create_ssl_certs() {
 
       # FIXME! Remove this and make postgresql work without SSL?
       # https://github.com/docker-library/docs/blob/master/postgres/README.md#arbitrary---user-notes
-      [ "${CN}" == "postgres" ] && [ "$(uname -s)" == "Linux" ] && sudo chown 70 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
+      if [ "${CN}" == "database" ] && [ "$(uname -s)" == "Linux" ]; then
+        sudo chown 70 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
+      fi
     fi
   done
 }
@@ -424,6 +426,7 @@ case "${SUB_COMMAND}" in
   up)
     load_compose_env
     create_ssl_certs
+    echo here
     compose up ${COMMAND_PARAMETERS}
     ;;
   down)
