@@ -26,6 +26,7 @@ x-volumes-docker-bin: &volumes-docker-bin
 
 # SERVICES
 services:
+
   ### DATABASE
   database:
     container_name: database
@@ -70,6 +71,7 @@ services:
     depends_on:
       - api
       - controller
+
   ### API
   api:
     container_name: api
@@ -129,6 +131,7 @@ services:
       - api
       - workbench
       - keepproxy
+
   ### WORKBENCH
   workbench:
     container_name: workbench
@@ -154,6 +157,7 @@ services:
     depends_on:
       - controller
       - api
+
   ### GIT-HTTPD
   # git-httpd:
   #   container_name: git-httpd
@@ -196,6 +200,8 @@ services:
   #   image: nmarvie/keep-balance:${BUILD_TAG}
   #   volumes:
   #     - *volumes-arvados-config
+
+  ### KEEPPROXY (KEEP)
   keepproxy:
     container_name: keep
     image: nmarvie/keepproxy:${BUILD_TAG}
@@ -218,6 +224,8 @@ services:
     depends_on:
       - controller
       - api
+
+  ### KEEPSTORE 0
   keep0:
     container_name: keep0
     image: nmarvie/keepstore:${BUILD_TAG}
@@ -226,6 +234,8 @@ services:
     volumes:
       - *volumes-arvados-config
       - ${KEEP0_DATA}:/var/lib/arvados/keep0
+
+  ### KEEPSTORE 1
   keep1:
     container_name: keep1
     image: nmarvie/keepstore:${BUILD_TAG}
@@ -234,6 +244,8 @@ services:
     volumes:
       - *volumes-arvados-config
       - ${KEEP1_DATA}:/var/lib/arvados/keep1
+
+  ### SHELL
   shell:
     container_name: shell
     image: nmarvie/shell:${BUILD_TAG}

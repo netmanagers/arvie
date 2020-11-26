@@ -11,6 +11,8 @@ current_env() {
   echo "                            Defaults to 'arvie'"
   echo "  * ARVIE_CLUSTER_NAME:     A unique 5 letters word to use as the Arvados' cluster name"
   echo "                            Defaults to 'arvie'"
+  echo "  * ARVIE_IMAGES_TAG:       Docker images' tag to use when spinning up the cluster"
+  echo "                            Defaults to 'latest'"
   echo "  * ARVIE_DATA_DIR:         Base directory where arvie clusters' data will be persisted"
   echo "                            Defaults to '${HOME}/.local/arvie'"
   echo "                            Current value '${ARVIE_DATA_DIR}'"
@@ -21,6 +23,7 @@ current_env() {
   echo "Current cluster's parameters:"
   echo "  * Name (ARVIE_CLUSTER_NAME): ${ARVIE_CLUSTER_NAME}"
   echo "  * Environment (ARVIE_CLUSTER_ENV): ${ARVIE_CLUSTER_ENV}"
+  echo "  * Images' tag (ARVIE_IMAGES_TAG): ${ARVIE_IMAGES_TAG}"
   echo "  * Data dir (under ARVIE_DATA_DIR): ${ARVIE_DATA}"
   echo "  * Config dir (under ARVIE_CONFIG_DIR): ${ARVIE_CONFIG}"
   echo 
@@ -98,7 +101,7 @@ usage() {
   echo >&2
   echo >&2 "        compose options:"
   echo >&2 "          -t, --tag <TAG>       Image <TAG> to use/invoke."
-  echo >&2 "                                Defaults to 'latest' (current value: ${TAG})"
+  echo >&2 "                                Defaults to 'latest' (current value: ${ARVIE_IMAGES_TAG})"
   echo >&2 "          [argumentsN]          The rest of the arguments after the '--' will be passed verbatim to docker-compose"
   echo >&2
   current_env
@@ -113,7 +116,6 @@ usage() {
 ### BASE DIR TO PERSIST CONFIGS
 [ -z "${ARVIE_CONFIG_DIR:-}" ] && ARVIE_CONFIG_DIR="${HOME}/.config/arvie"
 
-TAG="latest"
 COMMAND_PARAMETERS=""
 CACHE="no"
 ALL="no"
@@ -125,6 +127,8 @@ DOMAIN="arv.local"
 [ -z "${ARVIE_CLUSTER_ENV:-}" ] && ARVIE_CLUSTER_ENV="arvie"
 ### This cluster's name
 [ -z "${ARVIE_CLUSTER_NAME:-}" ] && ARVIE_CLUSTER_NAME="arvie"
+### Images tag to useme
+[ -z "${ARVIE_IMAGES_TAG:-}" ] && ARVIE_IMAGES_TAG="latest"
 
 # This cluster's data and config dirs
 ARVIE_DATA="${ARVIE_DATA_DIR}/${ARVIE_CLUSTER_ENV}"
@@ -193,7 +197,7 @@ arguments() {
         shift 2
         ;;
       -t | --tag)
-        TAG=${2}
+        ARVIE_IMAGES_TAG=${2}
         shift 2
         ;;
       -v | --var)
@@ -233,11 +237,11 @@ build() {
   cat > "${HOST_CONF_BUILD}/LAST_BUILD_INFO" << EOF
   BUILD_BRANCH="${BUILD_BRANCH}"
   BUILD_COMMIT="${BUILD_COMMIT}"
-  BUILD_TAG="${TAG}"
+  BUILD_TAG="${ARVIE_IMAGES_TAG}"
 EOF
 
   echo "Building ${ARVIE_CLUSTER_ENV} ${ARVIE_CLUSTER_NAME} Arvados' images"
-  COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 BUILD_TAG="${TAG}" docker-compose \
+  COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 BUILD_TAG="${ARVIE_IMAGES_TAG}" docker-compose \
     --env-file "${ARVIE_CONFIG}/compose/compose.env" \
     --file "${ARVIE_CONFIG}/compose/build.yml" \
     --log-level DEBUG \
@@ -390,7 +394,7 @@ clean() {
 ########## COMPOSE SECTION ##################
 compose() {
   echo "Running docker-compose"
-  BUILD_TAG="${TAG}" docker-compose \
+  BUILD_TAG="${ARVIE_IMAGES_TAG}" docker-compose \
     --env-file "${ARVIE_CONFIG}/compose/compose.env" \
     --file "${ARVIE_CONFIG}/compose/base.yml" \
     ${@}
