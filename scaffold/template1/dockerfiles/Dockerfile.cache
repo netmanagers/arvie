@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:experimental
+# https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/
+# CHECK!!!!
+# https://github.com/medicharlachiranjeevi/phusion-passenger-docker-rails/blob/master/Dockerfile
+
+# https://blog.carbonfive.com/2015/03/17/docker-rails-docker-compose-together-in-your-development-workflow/
+
+ARG RUBY_IMAGE
+FROM ${RUBY_IMAGE} AS builder
+# GEMS
+# https://bundler.io/v2.0/guides/bundler_docker_guide.html
+ARG GEM_HOME=/cache/gem
+ARG NPM_CONFIG_PREFIX=/cache/npm
+# build dir in the container
+ARG LOCAL_ARVADOS_SRC=/arvados
+ARG APP_NAME
+ARG APP_DIR
+ARG APP_SUBDIR=${APP_DIR}/${APP_NAME}
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV BUNDLE_PATH $GEM_HOME
+ENV PATH $BUNDLE_PATH/bin:$PATH
+ENV PORT $PORT
+
+# These are the ones arvbox uses
+ENV GEM_HOME ${GEM_HOME}
+ENV GEM_PATH ${GEM_HOME}
+ENV NPM_CONFIG_PREFIX ${NPM_CONFIG_PREFIX}
+ENV npm_config_cache_min ${NPM_CACHE_MIN}
+# ENV R_LIBS /var/lib/Rlibs
+
+# Avoid unnecessary files when installing packages
+COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
+COPY configs/build/gemrc /root/.gemrc
+
+# We use this to get the config :|
+COPY --from=nmarvie/server /app/arvados-server /usr/local/bin
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get install --yes \
+                    --no-install-recommends \
+                    bundler \
+                    curl \
+                    g++ \
+                    gcc \
+                    git \
+                    libcurl4 \
+                    libcurl4-gnutls-dev \
+                    libpq-dev \
+                    libxml2 \
+                    libxml2-dev \
+                    make \
+                    npm \
+                    postgresql-client \
+                    python-dev \
+                    ruby-dev \
+                    yarn \
+                    zlib1g-dev \
+ && mkdir -p /etc/arvados \
+ # Set up an appropriate config.yml (all these, taken from arvbox)
+ && arvados-server config-dump -config <(cat /etc/arvados/config.yml 2>/dev/null || echo  "Clusters: {zzzzz: {}}") > /tmp/x \
+ && mv /tmp/x /etc/arvados/config.yml \
+ && perl -p -i -e 'BEGIN{undef $/;} s/WebDAV(.*?):\n( *)ExternalURL: ""/WebDAV$1:\n$2ExternalURL: "example.com"/g' /etc/arvados/config.yml
