@@ -18,6 +18,11 @@ x-rails_build_defaults: &rails_build_defaults
   context: ${ARVIE_BASE_DIR}/
   dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.rails
 
+### CACHE BUILD DEFAULT PARAMETERS
+x-cache_build_defaults: &cache_build_defaults
+  context: ${ARVIE_BASE_DIR}/
+  dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.cache
+
 ### ARVADOS-SERVER BUILD
 x-arvados_server_build: &arvados_server_build
   build:
@@ -185,3 +190,17 @@ services:
       args:
         <<: *build_tag
         COMPUTE_IMAGE: ${COMPUTE_IMAGE}
+
+  ### BUILD-CACHE
+  # We need to have a few things in place to build the cache, so we
+  # create an image to speed that up
+  cache-builder:
+    image: nmarvie/cache-builder:${BUILD_TAG}
+    build:
+      <<: *rails_build_defaults
+      args:
+        <<: *build_tag
+        RUBY_IMAGE: ${RUBY_IMAGE}
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip

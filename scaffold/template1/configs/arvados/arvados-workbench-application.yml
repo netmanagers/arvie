@@ -1,8 +1,8 @@
 development:
   uuid_prefix: __CLUSTER__
-  secret_token: secret_token
-  blob_signing_key: blob_signing_key
-  sso_app_secret: sso_app_secret
+  secret_token: secrettoken
+  blob_signing_key: blobsigningkey
+  sso_app_secret: ssoappsecret
   sso_app_id: arvaos-server
   sso_provider_url: "https://sso"
   sso_insecure: true
@@ -18,5 +18,5 @@ development:
   default_collection_replication: 1
   docker_image_formats: ["v2"]
   keep_web_service_url: https://keep-web/
-  ManagementToken: management_token
+  ManagementToken: managementtoken
 

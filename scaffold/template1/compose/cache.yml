@@ -9,17 +9,9 @@
 version: '3.8'
 
 services:
-  ### NPM
-  npm-cache:
-    container_name: npm-cache
-    image: ${NODE_IMAGE}
-    volumes:
-      - ${HOST_NPMCACHE}:/cache/npm
-    command: /bin/true
-  ### RUBY
-  gem-cache:
-    container_name: gem-cache
-    image: ${RUBY_IMAGE}
+  cache-builder:
+    container_name: cache-builder
+    image: nmarvie/cache-builder:${BUILD_TAG}
     volumes:
       - ${HOST_CONF_BUILD}/dpkg-nodoc:/etc/dpkg/dpkg.cfg.d/01_nodoc
       - ${HOST_CONF_BUILD}/gemrc:/root/.gemrc

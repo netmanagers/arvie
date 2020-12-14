@@ -291,10 +291,10 @@ prepare_arvie_common_cache() {
     mkdir -p "${HOST_GEMCACHE}" "${HOST_GOCACHE}" "${HOST_PIPCACHE}" "${HOST_NPMCACHE}"
 
     echo >&2 "Building the NPM, Ruby gems and Golang caches"
-    COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose \
+    BUILD_TAG="${ARVIE_IMAGES_TAG}" COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose \
       --env-file "${ARVIE_CONFIG}/compose/compose.env" \
       --file "${ARVIE_CONFIG}/compose/cache.yml" \
-      up --remove-orphans gem-cache
+      up --remove-orphans
 
     echo >&2 "Tearing down the images used to build the cache"
     docker-compose \
@@ -333,35 +333,70 @@ create_env() {
 }
 
 create_ssl_certs() {
-  # Create the certs for the different VHosts and PG
+  # Ajax require certs signed by a CA or will silently fail, so we create a CA to sign the certs
+  if [ -f "${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.crt" ]; then
+    echo "The snakeoil SSL CA for ${ARVIE_CLUSTER_NAME}.${DOMAIN} already exists. Skipping"
+  else
+    mkdir -p "${HOST_CONF_DIR}/ssl"
+    openssl req \
+      -new \
+      -nodes \
+      -sha256 \
+      -x509 \
+      -subj "/C=CC/ST=Arvie State/O=__ARVIE__/OU=arvie/CN=snakeoil-ca-${ARVIE_CLUSTER_NAME}.${DOMAIN}" \
+      -extensions x509_ext \
+      -config <(cat /etc/ssl/openssl.cnf \
+              <(printf "\n[x509_ext]\nbasicConstraints=critical,CA:true,pathlen:0\nkeyUsage=critical,keyCertSign,cRLSign")) \
+      -out ${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.crt \
+      -keyout ${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.key \
+      -days 365
+  fi
 
-  for CN in database keep keep0 collections download ws workbench workbench2; do
-    CN_FQDN="${CN}.${ARVIE_CLUSTER_NAME}.${DOMAIN}"
+  # Create the certs for the different VHosts and PG
+  for CN in controller database keep collections download workbench workbench2; do
+    if [ "${CN}" == "controller" ] && [ "$(uname -s)" == "Linux" ]; then
+      CN_FQDN="${ARVIE_CLUSTER_NAME}.${DOMAIN}"
+    else
+      CN_FQDN="${CN}.${ARVIE_CLUSTER_NAME}.${DOMAIN}"
+    fi
     if [ -f "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key" ]; then
       echo "The snakeoil SSL cert for ${CN_FQDN} already exists. Skipping"
     else
       echo "Generating SSL cert for ${CN_FQDN} under ${HOST_CONF_DIR}/ssl"
       mkdir -p "${HOST_CONF_DIR}/ssl"
-      openssl req -new \
-        -text \
-        -passout "pass:abcd" \
-        -subj "/CN=${CN_FQDN}" \
-        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.req" \
-        -keyout "${HOST_CONF_DIR}/ssl/${CN_FQDN}.privkey.pem"
-      openssl rsa -in "${HOST_CONF_DIR}/ssl/${CN_FQDN}.privkey.pem" \
-        -passin pass:abcd \
-        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
-      openssl req -x509 \
-        -text \
-        -in "${HOST_CONF_DIR}/ssl/${CN_FQDN}.req" \
-        -key "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key" \
-        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.crt"
-      chmod 600 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
+
+      openssl req \
+        -config /etc/ssl/openssl.cnf \
+        -new \
+        -nodes \
+        -sha256 \
+        -subj "/C=CC/ST=Arvie State/O=__ARVIE__/OU=arvie/CN=${CN_FQDN}" \
+        -reqexts x509_ext \
+        -extensions x509_ext \
+        -config <(cat /etc/ssl/openssl.cnf \
+                <(printf "\n[x509_ext]\nkeyUsage=critical,digitalSignature,keyEncipherment\nsubjectAltName=DNS:${CN_FQDN}")) \
+        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.csr" \
+        -keyout "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key" && \
+      # The cert
+      openssl x509 \
+        -req \
+        -days 365 \
+        -in "${HOST_CONF_DIR}/ssl/${CN_FQDN}.csr" \
+        -out "${HOST_CONF_DIR}/ssl/${CN_FQDN}.crt" \
+        -extensions x509_ext \
+        -extfile <(cat /etc/ssl/openssl.cnf \
+                 <(printf "\n[x509_ext]\nkeyUsage=critical,digitalSignature,keyEncipherment\nsubjectAltName=DNS:localhost,DNS:${CN_FQDN}")) \
+        -CA ${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.crt \
+        -CAkey ${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.key \
+        -set_serial ${RANDOM}${RANDOM} && \
+      chmod 0644 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.crt" && \
+      chmod 0640 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
 
       # FIXME! Remove this and make postgresql work without SSL?
       # https://github.com/docker-library/docs/blob/master/postgres/README.md#arbitrary---user-notes
       if [ "${CN}" == "database" ] && [ "$(uname -s)" == "Linux" ]; then
         sudo chown 70 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
+        sudo chmod 0600 "${HOST_CONF_DIR}/ssl/${CN_FQDN}.key"
       fi
     fi
   done

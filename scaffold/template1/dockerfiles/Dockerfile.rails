@@ -12,7 +12,7 @@ FROM ${RUBY_IMAGE} AS builder
 ARG GEM_HOME=/cache/gem
 ARG NPM_CONFIG_PREFIX=/cache/npm
 # build dir in the container
-ARG LOCAL_ARVADOS_SRC=/usr/src/arvados
+ARG LOCAL_ARVADOS_SRC=/arvados
 ARG APP_NAME
 ARG APP_DIR
 ARG APP_SUBDIR=${APP_DIR}/${APP_NAME}

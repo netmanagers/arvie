@@ -36,7 +36,7 @@ services:
       - '5432:5432'
     volumes:
       - ${PG_DATA}:/var/lib/postgresql/data
-      - ${HOST_SCRIPTS_DIR}/postgresql:/docker-entrypoint-initdb.d
+      - ${HOST_CONF_POSTGRESQL}:/docker-entrypoint-initdb.d
       - ${HOST_CONF_DIR}/ssl/database.${CLUSTER}.${DOMAIN}.crt:/var/lib/postgresql/server.crt:ro
       - ${HOST_CONF_DIR}/ssl/database.${CLUSTER}.${DOMAIN}.key:/var/lib/postgresql/server.key:ro
     # yamllint disable-line rule:line-length

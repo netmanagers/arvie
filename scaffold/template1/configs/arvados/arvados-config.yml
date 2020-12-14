@@ -2,9 +2,9 @@
 Clusters:
   __CLUSTER__:
     API:
-      RailsSessionSecretToken: rails_session_secret_token
+      RailsSessionSecretToken: railssessionsecrettoken
     Collections:
-      BlobSigningKey: blob_signing_key
+      BlobSigningKey: blobsigningkey
       DefaultReplication: 1
       TrustAllContent: true
     Login:
@@ -25,7 +25,7 @@ Clusters:
         # corresponding config file (e.g., /etc/pam.d/arvados) or, if
         # there is none, the default 'other' config.
         # Service: arvados
-    ManagementToken: management_token
+    ManagementToken: managementtoken
     PostgreSQL:
       ConnectionPool: 32 # max concurrent connections per arvados server daemon
       Connection:
@@ -78,7 +78,7 @@ Clusters:
         ExternalURL: 'https://workbench.__CLUSTER__.__DOMAIN__:8443'
       Workbench2:
         ExternalURL: 'https://workbench2.__CLUSTER__.__DOMAIN__:3001'
-    SystemRootToken: system_root_token
+    SystemRootToken: systemroottoken
     TLS:
       Certificate: ''
       Key: ''
@@ -90,7 +90,7 @@ Clusters:
       # AutoSetupNewUsersWithVmUUID: vm_uuid
       NewUsersAreActive: true
     Workbench:
-      SecretKeyBase: workbench_secret_key_base
+      SecretKeyBase: workbenchsecretkeybase
       SiteName: VWXYZ
     Volumes:
       __CLUSTER__-nyw5e-000000000000000:

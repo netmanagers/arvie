@@ -50,7 +50,8 @@ WORKDIR /app/
 COPY --from=builder /go/bin/$APP_NAME .
 # These other deps are specific to crunch-dispatch-local, as seen in
 # arvados/tools/arvbox/lib/arvbox/docker/service/crunch-dispatch-local/run-service
-COPY --from=nmarvie/server /app/arvados-server /usr/local/bin/crunch-run
+### FIXME!!! Required?????
+# COPY --from=nmarvie/server /app/arvados-server /usr/local/bin/crunch-run
 COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
 # Damn - https://github.com/moby/moby/issues/18492#issuecomment-347364597
 RUN ln -s ./$APP_NAME executable

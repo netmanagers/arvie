@@ -11,6 +11,17 @@ bundle check || bundle install
 
 echo "Try to create the database if /arvados/flags/api_database_setup does not exist"
 if ! test -f /arvados/flags/api_database_setup ; then
+  # Wait for the database to be available
+  echo "Checking database availability"
+  for t in {1..20}; do
+    if pg_isready -h database; then
+      echo "Database server ready"
+      break
+    fi
+    echo "Database not ready..."
+    sleep 1
+  done
+
   bundle exec rake db:setup && \
   # PGPASSWORD=arvados psql -v --username arvados --dbname arvados -f /usr/src/arvados/services/api/db/structure.sql
   touch /arvados/flags/api_database_setup
