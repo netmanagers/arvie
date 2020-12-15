@@ -46,7 +46,7 @@ services:
 
   ### CONTROLLER
   controller:
-    image: nmarvie/controller:${BUILD_TAG}
+    image: nmarvie/controller-dev:${BUILD_TAG}
     <<: *arvados_server_build
 
   ### WEBSOCKET

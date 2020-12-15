@@ -51,3 +51,27 @@ COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
 # Damn - https://github.com/moby/moby/issues/18492#issuecomment-347364597
 RUN ln -s ./$APP_NAME executable
 ENTRYPOINT ["./executable"]
+
+#FINAL IMAGE for Development
+#(includes delve listening to port 45000)
+FROM builder AS devfinal
+
+ARG APP_NAME
+# Avoid unnecessary files when installing packages
+COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get install --yes --no-install-recommends \
+            libfuse2
+
+WORKDIR /app/
+COPY --from=builder /go/bin/$APP_NAME .
+COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
+
+RUN go get github.com/go-delve/delve/cmd/dlv
+
+RUN ln -s ./$APP_NAME executable
+ENTRYPOINT ["/go/bin/dlv", "--continue", "--headless", "--accept-multiclient", "--listen=:45000", "exec", "./executable"]
