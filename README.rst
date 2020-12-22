@@ -79,7 +79,7 @@ The default subdir is *arvados*.
 
 .. code-block:: bash
 
-   $ git clone https://github.com/netmanagers/arvie.git
+   git clone https://github.com/netmanagers/arvie.git
 
 2. Check the variables in the ``.env`` file, which will be used in a few places. Quite possible you don't
    need to change them. If unsure, leave them as they are. Default configuration work creating everything
@@ -99,28 +99,22 @@ The default subdir is *arvados*.
 
 .. code-block:: bash
 
-   $ echo \
+   export ARVIE_CLUSTER_NAME=arvie
+   export DOMAIN=arv.local
+   echo \
        127.0.0.2 \
-       api \
-       keep \
-       keep0 \
-       collections \
-       download \
-       ws \
-       workbench \
-       workbench2 \
-       api.vwxyz.arv.local \
-       keep.vwxyz.arv.local \
-       keep0.vwxyz.arv.local \
-       collections.vwxyz.arv.local \
-       download.vwxyz.arv.local \
-       ws.vwxyz.arv.local \
-       workbench.vwxyz.arv.local \
-       workbench2.vwxyz.arv.local \
-       vwxyz.arv.local \
-       >> /etc/hosts
+       api.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       keep.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       keep0.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       collections.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       download.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       ws.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       workbench.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       workbench2.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       ${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       | sudo tee --append /etc/hosts
 
-5. Enter the URL `https://workbench.vwxyz.arv.local:8443`_ in your browser. Ignore the security
+5. Enter the URL `https://workbench.arvie.arv.local:8443`_ in your browser. Ignore the security
    message, as we're using self-signed certificates created by Arvie.
 6. Log in to your cluster (initial user/pass: alice/alice)
 
