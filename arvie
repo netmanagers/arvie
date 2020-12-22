@@ -17,7 +17,7 @@ current_env() {
   echo "                            Defaults to '${HOME}/.local/arvie'"
   echo "                            Current value '${ARVIE_DATA_DIR}'"
   echo "  * ARVIE_CONFIG_DIR:       Directory where arvie clusters' config are stored"
-  echo "                            Defaults to '${HOME}/.config/arvie/arvie'"
+  echo "                            Defaults to '${HOME}/.config/arvie'"
   echo "                            Current value '${ARVIE_CONFIG_DIR}'"
   echo 
   echo "Current cluster's parameters:"
@@ -66,7 +66,7 @@ usage() {
   echo >&2
   echo >&2 "  * env: Prepares and manages Arvie environments to run clusters"
   echo >&2
-  echo >&2 "        Usage: ${COMMAND} create [-s|--scaffold SCAFFOLD] [-n|--name NAME] [-d|--domain DOMAIN] [-v|--var VAR1=value] [-v|--var VAR2=value2] [-v|--var VARN=valueN]"
+  echo >&2 "        Usage: ${COMMAND} env [-s|--scaffold SCAFFOLD] [-n|--name NAME] [-d|--domain DOMAIN] [-v|--var VAR1=value] [-v|--var VAR2=value2] [-v|--var VARN=valueN]"
   echo >&2
   echo >&2 "        create options:"
   echo >&2 "          -n, --name            A unique 5 letters word to use as the Arvados' cluster name"
@@ -465,7 +465,6 @@ case "${SUB_COMMAND}" in
   up)
     load_compose_env
     create_ssl_certs
-    echo here
     compose up ${COMMAND_PARAMETERS}
     ;;
   down)
