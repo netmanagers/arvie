@@ -1,10 +1,8 @@
 ---
 Clusters:
   __CLUSTER__:
-    API:
-      RailsSessionSecretToken: railssessionsecrettoken
     Collections:
-      BlobSigningKey: blobsigningkey
+      BlobSigningKey: blobsigningkeymushaveatleast32characters
       DefaultReplication: 1
       TrustAllContent: true
     Login:
@@ -25,7 +23,7 @@ Clusters:
         # corresponding config file (e.g., /etc/pam.d/arvados) or, if
         # there is none, the default 'other' config.
         # Service: arvados
-    ManagementToken: managementtoken
+    ManagementToken: managementtokenmushaveatleast32characters
     PostgreSQL:
       ConnectionPool: 32 # max concurrent connections per arvados server daemon
       Connection:
@@ -57,7 +55,7 @@ Clusters:
         InternalURLs:
           # WE need to parse it through nginx, apparently
           # 'http://nginx:4008': {}
-          'http://api:8004': {}
+          'http://railsapi:8084': {}
       WebDAV:
         ExternalURL: 'https://collections.__CLUSTER__.__DOMAIN__:9002'
         InternalURLs:
@@ -78,7 +76,7 @@ Clusters:
         ExternalURL: 'https://workbench.__CLUSTER__.__DOMAIN__:8443'
       Workbench2:
         ExternalURL: 'https://workbench2.__CLUSTER__.__DOMAIN__:3001'
-    SystemRootToken: systemroottoken
+    SystemRootToken: systemroottokenmushaveatleast32characters
     TLS:
       Certificate: ''
       Key: ''

@@ -101,6 +101,7 @@ services:
       default:
         aliases:
           - ${CLUSTER}.${DOMAIN}
+          - railsapi.${CLUSTER}.${DOMAIN}
           - workbench.${CLUSTER}.${DOMAIN}
           - workbench2.${CLUSTER}.${DOMAIN}
           - collections.${CLUSTER}.${DOMAIN}
