@@ -14,7 +14,7 @@ x-volumes-cache-gem: &volumes-cache-gem
 x-volumes-cache-npm: &volumes-cache-npm
   ${HOST_NPMCACHE}:/cache/npm
 x-volumes-cache-pip: &volumes-cache-pip
-  ${HOST_PIPCACHE}:/cache.pip
+  ${HOST_PIPCACHE}:/cache/pip
 x-volumes-flags: &volumes-flags
   ${ARVBOX_FLAGS}:/arvados/flags
 x-volumes-scripts: &volumes-scripts
@@ -173,24 +173,31 @@ services:
     # TL;DR: no, it's not. you better run siblings
     image: nmarvie/crunch-dispatch-local:${BUILD_TAG}
     # command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run'
-    command: '-poll-interval=1'
+    command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run.sh'
     environment:
-      ARVADOS_HOST: api
-      ARVADOS_API_TOKEN: system_root_token
+      ARVADOS_API_HOST: "${CLUSTER}.${DOMAIN}:8000"
+      ARVADOS_API_TOKEN: systemroottokenmushaveatleast32characters
       ARVADOS_API_HOST_INSECURE: 1
     tty: true   # Enables debugging capabilities when attached to this container.
     volumes:
       - *volumes-arvados-config
-      - *volumes-docker-sock
-      - *volumes-docker-bin
+      # - *volumes-docker-sock
+      # - *volumes-docker-bin
   # FIXME! If we want to use the slurm dispatcher
   # compute0:
-  #   container_name: compute
+  #   container_name: compute0
   #   image: nmarvie/compute:${BUILD_TAG}
   #   tty: true   # Enables debugging capabilities when attached to this container.
-  #   volumes:
-  #     - *volumes-docker-sock
-  #     - *volumes-docker-bin
+  #   # volumes:
+  #   #   - *volumes-docker-sock
+  #   #   - *volumes-docker-bin
+  # compute1:
+  #   container_name: compute1
+  #   image: nmarvie/compute:${BUILD_TAG}
+  #   tty: true   # Enables debugging capabilities when attached to this container.
+  #   # volumes:
+  #   #   - *volumes-docker-sock
+  #   #   - *volumes-docker-bin
   # health:
   #   container_name: health
   #   image: nmarvie/health:${BUILD_TAG}

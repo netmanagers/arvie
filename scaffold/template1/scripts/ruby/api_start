@@ -32,6 +32,8 @@ if ! test -f /arvados/flags/api_database_setup ; then
                                         --username="arvados___CLUSTER__" \
                                         --dbname="arvados___CLUSTER__" \
                                         --file=/usr/src/arvados/services/api/db/structure.sql
+  echo "Populating the database with initial defaults"
+  bundle exec rails db:seed || exit 1
   touch /arvados/flags/api_database_setup
 fi
 

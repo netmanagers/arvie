@@ -17,3 +17,5 @@ for GF in apps/workbench services/api sdk/cli; do
     fi
   )
 done
+# We use the cache also for the shell container
+gem install arvados-cli

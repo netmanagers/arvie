@@ -36,6 +36,10 @@ RUN --mount=type=cache,target=/root/.cache,id=root-cache \
 FROM debian:buster-slim AS final
 
 ARG APP_NAME
+ENV ARVADOS_API_HOST ${ARVADOS_API_HOST}
+ENV ARVADOS_API_TOKEN ${ARVADOS_API_TOKEN}
+ENV ARVADOS_API_HOST_INSECURE true
+
 # Avoid unnecessary files when installing packages
 COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
 COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
@@ -43,15 +47,16 @@ COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
     --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
     apt-get update \
- && apt-get install --yes --no-install-recommends \
-            libfuse2
+ && apt-get install --yes --no-install-recommends libfuse2 \
+ && echo 'exec /usr/local/bin/crunch-run -container-enable-networking=default -container-network-mode=host ${@}' |tee /usr/local/bin/crunch-run.sh \
+ && chmod 755 /usr/local/bin/crunch-run.sh
+
 
 WORKDIR /app/
 COPY --from=builder /go/bin/$APP_NAME .
 # These other deps are specific to crunch-dispatch-local, as seen in
 # arvados/tools/arvbox/lib/arvbox/docker/service/crunch-dispatch-local/run-service
-### FIXME!!! Required?????
-# COPY --from=nmarvie/server /app/arvados-server /usr/local/bin/crunch-run
+COPY --from=nmarvie/server /app/arvados-server /usr/local/bin/crunch-run
 COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
 # Damn - https://github.com/moby/moby/issues/18492#issuecomment-347364597
 RUN ln -s ./$APP_NAME executable

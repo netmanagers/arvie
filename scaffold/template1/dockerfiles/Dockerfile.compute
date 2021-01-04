@@ -1,9 +1,7 @@
 # syntax=docker/dockerfile:experimental
-# https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/
-# CHECK!!!!
-# https://github.com/medicharlachiranjeevi/phusion-passenger-docker-rails/blob/master/Dockerfile
 
-# https://blog.carbonfive.com/2015/03/17/docker-rails-docker-compose-together-in-your-development-workflow/
+# Initial crude image using packages, following
+# https://doc.arvados.org/v1.4/install/install-compute-node.html
 
 ARG COMPUTE_IMAGE
 FROM ${COMPUTE_IMAGE} AS builder
@@ -19,13 +17,16 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
     apt-get update \
  && apt-get --no-install-recommends install --yes gnupg \
  && /usr/bin/apt-key adv --keyserver keyserver.ubuntu.com --recv 1078ECD7 \
- && echo "deb http://apt.arvados.org/ buster main" | tee /etc/apt/sources.list.d/arvados.list \
+ && echo "deb http://apt.arvados.org/buster buster main" | tee /etc/apt/sources.list.d/arvados.list \
  && apt-get update \
  && apt-get install --yes \
                     --no-install-recommends \
                     python3-arvados-fuse \
                     crunch-run \
                     arvados-docker-cleaner \
+ && echo 'exec /usr/bin/crunch-run -container-enable-networking=default -container-network-mode=host ${@}' |tee /usr/local/bin/crunch-run.sh \
+ && chmod 755 /usr/local/bin/crunch-run.sh \
+
  && apt-get autoremove --purge --yes \
  && rm -rf /lib/systemd/system/systemd*udev* \
            /lib/systemd/system/getty.target \
