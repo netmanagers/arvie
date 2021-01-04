@@ -84,7 +84,7 @@ usage() {
   echo >&2 "               If all requirements are already fulfilled, it will do nothing."
   echo >&2 "               Otherwise, will create any of the missing ones."
   echo >&2
-  echo >&2 "  * clean: Deletes lingering Arvados files () or all data, if desired"
+  echo >&2 "  * clean: Deletes lingering Arvados PID files or all data, if desired. Does NOT delete config dirs"
   echo >&2
   echo >&2 "        Usage: ${COMMAND} clean [-a|--all]"
   echo >&2

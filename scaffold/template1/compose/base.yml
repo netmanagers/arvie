@@ -57,6 +57,7 @@ services:
       - *volumes-arvados-config
     depends_on:
       - database
+      - api
 
   ### WEBSOCKETS
   websocket:
@@ -76,7 +77,7 @@ services:
   api:
     container_name: api
     image: nmarvie/api:${BUILD_TAG}
-    command: /scripts/ruby/app_start 8004
+    command: /scripts/ruby/api_start 8004
     tty: true   # Enables debugging capabilities when attached to this container.
     # ports:
     #   - 8004:8004
@@ -94,21 +95,20 @@ services:
       npm_config_cache_min: ${NPM_CACHE_MIN}
     depends_on:
       - database
-      - controller
   nginx:
     container_name: nginx
     networks:
       default:
         aliases:
           - ${CLUSTER}.${DOMAIN}
-          - railsapi.${CLUSTER}.${DOMAIN}
-          - workbench.${CLUSTER}.${DOMAIN}
-          - workbench2.${CLUSTER}.${DOMAIN}
-          - collections.${CLUSTER}.${DOMAIN}
-          - download.${CLUSTER}.${DOMAIN}
-          - keep.${CLUSTER}.${DOMAIN}
-          - webshell.${CLUSTER}.${DOMAIN}
-          - ws.${CLUSTER}.${DOMAIN}
+          - nginx-api
+          - nginx-workbench
+          - nginx-workbench2
+          - nginx-collections
+          - nginx-download
+          - nginx-keep
+          - nginx-webshell
+          - nginx-ws
     image: nginx:stable-alpine
     restart: always
     ports:
@@ -137,7 +137,7 @@ services:
   workbench:
     container_name: workbench
     image: nmarvie/workbench:${BUILD_TAG}
-    command: /scripts/ruby/app_start 8002
+    command: /scripts/ruby/workbench_start 8002
     tty: true   # Enables debugging capabilities when attached to this container.
     # ports:
     #   - 8443:8443

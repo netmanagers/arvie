@@ -1,0 +1,42 @@
+#!/bin/bash -x
+# Check arvados/tools/arvbox/lib/arvbox/docker/api-setup.sh
+
+set -euo pipefail
+
+PORT=$1
+
+export GEM_HOME=/cache/gem
+export NPM_CONFIG_PREFIX=/cache/npm
+
+echo "Run bundle install if required"
+bundle check || bundle install
+
+echo "Waiting for the database server to be ready"
+for t in {1..20}; do
+  if pg_isready -h database; then
+    echo "Database server ready"
+    break
+  fi
+  echo "Database not ready..."
+  sleep 1
+done
+
+echo "Try to create the database if /arvados/flags/api_database_setup does not exist"
+if ! test -f /arvados/flags/api_database_setup ; then
+  # bundle exec rails db:setup
+  PGPASSWORD="arvados___CLUSTER__" psql --host="database" \
+                                        --username="arvados___CLUSTER__" \
+                                        --dbname="template1" \
+                                        --command="CREATE DATABASE arvados___CLUSTER__ ENCODING = 'utf8'"
+  PGPASSWORD="arvados___CLUSTER__" psql --host="database" \
+                                        --username="arvados___CLUSTER__" \
+                                        --dbname="arvados___CLUSTER__" \
+                                        --file=/usr/src/arvados/services/api/db/structure.sql
+  touch /arvados/flags/api_database_setup
+fi
+
+echo "Run migrations to update/upgrade the database structure"
+bundle exec rails db:migrate || exit 1
+
+echo "Starting the Rails API server"
+bundle exec rails server -b 0.0.0.0 -p ${PORT}

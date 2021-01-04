@@ -53,9 +53,8 @@ Clusters:
           'http://keep1:25108': {}
       RailsAPI:
         InternalURLs:
-          # WE need to parse it through nginx, apparently
-          # 'http://nginx:4008': {}
-          'http://railsapi:8084': {}
+          # WE need to pass requests through nginx, or bad things will happen
+          'http://nginx-api:8084': {}
       WebDAV:
         ExternalURL: 'https://collections.__CLUSTER__.__DOMAIN__:9002'
         InternalURLs:
