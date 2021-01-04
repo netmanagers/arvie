@@ -70,7 +70,7 @@ Clusters:
       Websocket:
         ExternalURL: 'wss:///ws.__CLUSTER__.__DOMAIN__:8002/websocket'
         InternalURLs:
-          'http://websocket:8005': {}
+          'http://ws:8005': {}
       Workbench1:
         ExternalURL: 'https://workbench.__CLUSTER__.__DOMAIN__:8443'
       Workbench2:

@@ -353,7 +353,7 @@ create_ssl_certs() {
   fi
 
   # Create the certs for the different VHosts and PG
-  for CN in controller database keep collections download workbench workbench2; do
+  for CN in controller database keep collections download workbench workbench2 ws; do
     if [ "${CN}" == "controller" ] && [ "$(uname -s)" == "Linux" ]; then
       CN_FQDN="${ARVIE_CLUSTER_NAME}.${DOMAIN}"
     else

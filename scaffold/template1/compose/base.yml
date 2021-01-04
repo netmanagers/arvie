@@ -61,7 +61,7 @@ services:
 
   ### WEBSOCKETS
   websocket:
-    container_name: websocket
+    container_name: ws
     image: nmarvie/websocket:${BUILD_TAG}
     command: ws
     # ports:
