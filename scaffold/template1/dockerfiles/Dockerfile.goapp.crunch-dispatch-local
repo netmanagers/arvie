@@ -1,0 +1,95 @@
+# syntax=docker/dockerfile:experimental
+# https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/
+ARG COMPUTE_IMAGE
+### BUILDER
+FROM golang:buster AS builder
+
+ARG APP_NAME
+ARG APP_DIR
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/experimental.md
+# RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get install --yes --no-install-recommends \
+            git \
+            libfuse-dev \
+            libpam0g-dev
+
+COPY ./arvados /usr/src/arvados/git.arvados.org/arvados.git/
+
+# We'll need docker to run crunch-dispatch-local, so we use the static binaries
+# WORKDIR /
+# RUN curl -o /tmp/docker.tar.gz https://download.docker.com/linux/static/stable/x86_64/docker-19.03.14.tgz
+# FIXME! ADD should be the command to use, but it's failing me. Oh, well...
+# RUN tar xfv /tmp/docker.tar.gz
+
+WORKDIR /usr/src/arvados/git.arvados.org/arvados.git
+
+RUN --mount=type=cache,target=/root/.cache,id=root-cache \
+    --mount=type=cache,target=/go/pkg,id=go-cache-pkg \
+    go mod download
+
+RUN --mount=type=cache,target=/root/.cache,id=root-cache \
+    --mount=type=cache,target=/go/pkg,id=go-cache-pkg \
+    GOOS=linux \
+    go install -a -installsuffix cgo ./$APP_DIR/$APP_NAME
+
+#FINAL IMAGE
+FROM ${COMPUTE_IMAGE} AS final
+
+ARG APP_NAME
+ENV DEBIAN_FRONTEND noninteractive
+
+ENV ARVADOS_API_HOST ${ARVADOS_API_HOST}
+ENV ARVADOS_API_TOKEN ${ARVADOS_API_TOKEN}
+ENV ARVADOS_API_HOST_INSECURE true
+
+# Avoid unnecessary files when installing packages
+COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get --no-install-recommends install --yes gnupg \
+ && /usr/bin/apt-key adv --keyserver keyserver.ubuntu.com --recv 1078ECD7 \
+ && echo "deb http://apt.arvados.org/buster buster main" | tee /etc/apt/sources.list.d/arvados.list \
+ && apt-get update \
+ && apt-get install --yes \
+                    --no-install-recommends \
+                    dumb-init \
+                    ca-certificates \
+                    dmsetup \
+                    util-linux \
+                    iptables \
+                    libfuse2 \
+                    libdevmapper1.02.1 \
+                    python3-arvados-fuse \
+                    arvados-docker-cleaner \
+ && apt-get autoremove --purge --yes \
+ && rm -rf /lib/systemd/system/systemd*udev* \
+           /lib/systemd/system/getty.target \
+ && (find / ! -path "/{proc,sys,dev}" -name "*.pyc"; \
+     find / ! -path "/{proc,sys,dev}" -name "__pycache__"; \
+     find /var/log -type f) | \
+    grep -v ^/proc | xargs rm -rf \
+    # Also obscure any `getty` binaries https://github.com/moby/moby/issues/4040#issuecomment-339022455
+ && cp /bin/true /sbin/agetty
+
+COPY --from=docker:latest /usr/local/bin/dockerd /usr/local/bin/dockerd
+COPY --from=docker:latest /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker:latest /usr/local/bin/runc /usr/local/bin/runc
+COPY --from=docker:latest /usr/local/bin/containerd /usr/local/bin/containerd
+COPY --from=docker:latest /usr/local/bin/containerd-shim /usr/local/bin/containerd-shim
+COPY --from=docker:latest /usr/local/bin/containerd-shim-runc-v2 /usr/local/bin/containerd-shim-runc-v2
+COPY --from=nmarvie/server /app/arvados-server /usr/bin/crunch-run
+COPY --from=builder /go/bin/$APP_NAME /usr/local/bin/crunch-dispatch-local
+
+COPY configs/build/crunch-run.sh /usr/local/bin/crunch-run.sh
+COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]

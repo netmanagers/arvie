@@ -1,0 +1,104 @@
+---
+Clusters:
+  __CLUSTER__:
+    Collections:
+      BlobSigningKey: blobsigningkeymushaveatleast32characters
+      DefaultReplication: 1
+      TrustAllContent: true
+    Login:
+      Test:
+        # Authenticate users listed here in the config file. This
+        # feature is intended to be used in test environments, and
+        # should not be used in production.
+        Enable: true
+        Users:
+          alice:
+            Email: alice@__CLUSTER__.__DOMAIN__
+            Password: alice
+      PAM:
+        # (Experimental) Use PAM to authenticate users.
+        Enable: false
+
+        # PAM service name. PAM will apply the policy in the
+        # corresponding config file (e.g., /etc/pam.d/arvados) or, if
+        # there is none, the default 'other' config.
+        # Service: arvados
+    ManagementToken: managementtokenmushaveatleast32characters
+    PostgreSQL:
+      ConnectionPool: 32 # max concurrent connections per arvados server daemon
+      Connection:
+        # All parameters here are passed to the PG client library in a connection string;
+        # see https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
+        client_encoding: utf8
+        dbname: arvados___CLUSTER__
+        host: database
+        password: arvados___CLUSTER__
+        user: arvados___CLUSTER__
+    Services:
+      ### EXTERNALURLs are the URL accessible from the host
+      Controller:
+        ExternalURL: 'https://__CLUSTER__.__DOMAIN__:8000'
+        InternalURLs:
+          'http://controller:8003': {}
+      # Keepbalance:
+      #   InternalURLs:
+      #     'http://keepbalance:9005': {}
+      Keepproxy:
+        ExternalURL: 'https://keep.__CLUSTER__.__DOMAIN__:25101'
+        InternalURLs:
+          'http://keep:25100': {}
+      Keepstore:
+        InternalURLs:
+          'http://keep0:25107': {}
+          'http://keep1:25108': {}
+      RailsAPI:
+        InternalURLs:
+          # WE need to pass requests through nginx, or bad things will happen
+          'http://nginx-api:8084': {}
+      WebDAV:
+        ExternalURL: 'https://collections.__CLUSTER__.__DOMAIN__:9002'
+        InternalURLs:
+          'http://keepweb:9003/': {}
+      WebDAVDownload:
+        ExternalURL: 'https://download.__CLUSTER__.__DOMAIN__:9002'
+        InternalURLs:
+          'http://keepweb:9003/': {}
+      WebShell:
+        ExternalURL: 'https://webshell.__CLUSTER__.__DOMAIN__:4202'
+        InternalURLs:
+          'http://webshell:4200/': {}
+      Websocket:
+        ExternalURL: 'wss:///ws.__CLUSTER__.__DOMAIN__:8002/websocket'
+        InternalURLs:
+          'http://ws:8005': {}
+      Workbench1:
+        ExternalURL: 'https://workbench.__CLUSTER__.__DOMAIN__:8443'
+      Workbench2:
+        ExternalURL: 'https://workbench2.__CLUSTER__.__DOMAIN__:3001'
+    SystemRootToken: systemroottokenmushaveatleast32characters
+    TLS:
+      Certificate: ''
+      Key: ''
+      Insecure: true
+    Users:
+      AutoAdminFirstUser: true
+      AutoSetupNewUsers: true
+      AutoSetupNewUsersWithRepository: true
+      # AutoSetupNewUsersWithVmUUID: vm_uuid
+      NewUsersAreActive: true
+    Workbench:
+      SecretKeyBase: workbenchsecretkeybase
+      SiteName: VWXYZ
+    Volumes:
+      __CLUSTER__-nyw5e-000000000000000:
+        AccessViaHosts:
+          'http://keep0:25107': {}
+        Driver: Directory
+        DriverParameters:
+          Root: /var/lib/arvados/keep0
+      __CLUSTER__-nyw5e-111111111111111:
+        AccessViaHosts:
+          'http://keep1:25108': {}
+        Driver: Directory
+        DriverParameters:
+          Root: /var/lib/arvados/keep1

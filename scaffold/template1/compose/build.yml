@@ -1,0 +1,204 @@
+---
+# This is the build docker-compose.yml file.
+# Is the one that will be used when invoking 'arvie build'
+
+version: '3.8'
+
+### BUILD TAG
+x-build_tag: &build_tag
+  BUILD_TAG: ${BUILD_TAG}
+
+### GOAPP BUILD DEFAULT PARAMETERS
+x-goapp_build_defaults: &goapp_build_defaults
+  context: ${ARVIE_BASE_DIR}/
+  dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.goapp
+
+### RAILS BUILD DEFAULT PARAMETERS
+x-rails_build_defaults: &rails_build_defaults
+  context: ${ARVIE_BASE_DIR}/
+  dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.rails
+
+### CACHE BUILD DEFAULT PARAMETERS
+x-cache_build_defaults: &cache_build_defaults
+  context: ${ARVIE_BASE_DIR}/
+  dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.cache
+
+### ARVADOS-SERVER BUILD
+x-arvados_server_build: &arvados_server_build
+  build:
+    <<: *goapp_build_defaults
+    args:
+      <<: *build_tag
+      APP_DIR: cmd
+      APP_NAME: arvados-server
+
+# SERVICES
+services:
+  ### ARVADOS-SERVER
+  arvados-server:
+    image: nmarvie/server:${BUILD_TAG}
+    <<: *arvados_server_build
+
+  ### ARVADOS-CLIENT
+  arvados-client:
+    image: nmarvie/client:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      args:
+        <<: *build_tag
+        APP_DIR: cmd
+        APP_NAME: arvados-client
+
+  ### CONTROLLER
+  controller:
+    image: nmarvie/controller:${BUILD_TAG}
+    <<: *arvados_server_build
+
+  ### WEBSOCKET
+  websocket:
+    image: nmarvie/websocket:${BUILD_TAG}
+    <<: *arvados_server_build
+
+  ### API
+  # The API image can be build and run standalone as a rails app,
+  api:
+    image: nmarvie/api:${BUILD_TAG}
+    build:
+      <<: *rails_build_defaults
+      args:
+        <<: *build_tag
+        RUBY_IMAGE: ${RUBY_IMAGE}
+        APP_DIR: services
+        APP_NAME: api
+        PORT: 8004
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip
+
+  ### WORKBENCH
+  workbench:
+    image: nmarvie/workbench:${BUILD_TAG}
+    build:
+      <<: *rails_build_defaults
+      args:
+        <<: *build_tag
+        RUBY_IMAGE: ${RUBY_IMAGE}
+        APP_DIR: apps
+        APP_NAME: workbench
+        PORT: 9002
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip
+
+  ### GIT-HTTPD
+  git-httpd:
+    image: nmarvie/git-httpd:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      args:
+        <<: *build_tag
+        APP_DIR: services
+        APP_NAME: arv-git-httpd
+
+  ### CRUNCH-DISPATCH-LOCAL
+  crunch-dispatch-local:
+    # FIXME! Not sure if it needs a whole dockerd or a docker client
+    # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
+    image: nmarvie/crunch-dispatch-local:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.goapp.crunch-dispatch-local
+      args:
+        <<: *build_tag
+        COMPUTE_IMAGE: ${COMPUTE_IMAGE}
+        APP_DIR: services
+        APP_NAME: crunch-dispatch-local
+  # crunch-dispatch-slurm:
+
+  ### HEALTH
+  health:
+    image: nmarvie/health:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      args:
+        <<: *build_tag
+        APP_DIR: services
+        APP_NAME: health
+
+  ### KEEP-BALANCE
+  keep-balance:
+    image: nmarvie/keep-balance:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      args:
+        <<: *build_tag
+        APP_DIR: services
+        APP_NAME: keep-balance
+
+  ### KEEPPROXY
+  keepproxy:
+    image: nmarvie/keepproxy:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      args:
+        <<: *build_tag
+        APP_DIR: services
+        APP_NAME: keepproxy
+
+  ### KEEP-WEB
+  keep-web:
+    image: nmarvie/keep-web:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      args:
+        <<: *build_tag
+        APP_DIR: services
+        APP_NAME: keep-web
+
+  ### KEEPSTORE
+  keepstore:
+    image: nmarvie/keepstore:${BUILD_TAG}
+    build:
+      <<: *goapp_build_defaults
+      args:
+        <<: *build_tag
+        APP_DIR: services
+        APP_NAME: keepstore
+
+  ### SHELL
+  shell:
+    image: nmarvie/shell:${BUILD_TAG}
+    build:
+      context: ${ARVIE_BASE_DIR}/
+      dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.shell
+      args:
+        <<: *build_tag
+        RUBY_IMAGE: ${RUBY_IMAGE}
+        COMPUTE_IMAGE: ${COMPUTE_IMAGE}
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip
+
+  ### COMPUTE
+  compute:
+    image: nmarvie/compute:${BUILD_TAG}
+    build:
+      context: ${ARVIE_BASE_DIR}/
+      dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.compute
+      args:
+        <<: *build_tag
+        COMPUTE_IMAGE: ${COMPUTE_IMAGE}
+
+  ### BUILD-CACHE
+  # We need to have a few things in place to build the cache, so we
+  # create an image to speed that up
+  cache-builder:
+    image: nmarvie/cache-builder:${BUILD_TAG}
+    build:
+      <<: *rails_build_defaults
+      args:
+        <<: *build_tag
+        RUBY_IMAGE: ${RUBY_IMAGE}
+        GEM_HOME: /cache/gem
+        NPM_CONFIG_PREFIX: /cache/npm
+        PIPCACHE: /cache/pip

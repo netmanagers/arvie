@@ -1,0 +1,43 @@
+---
+# This is the cache builder docker-compose.yml file.
+# Is the one that will be used when invoking 'arvie prepare'
+
+# You can use it before building images, to get a cache of npm, gems, pip or
+# go packages/modules and to overcame the fact that docker can't mount
+# volumes at build time.
+
+version: '3.8'
+
+# VOLUMES ANCHORS TO DRY THE CONFIG
+x-volumes-arvados-config: &volumes-arvados-config
+  ${HOST_CONF_ARVADOS}/arvados-config.yml:/etc/arvados/config.yml
+x-volumes-arvados-src: &volumes-arvados-src
+  ${ARVADOS_ROOT}:/usr/src/arvados
+x-volumes-cache-gem: &volumes-cache-gem
+  ${HOST_GEMCACHE}:/cache/gem
+x-volumes-cache-npm: &volumes-cache-npm
+  ${HOST_NPMCACHE}:/cache/npm
+x-volumes-cache-pip: &volumes-cache-pip
+  ${HOST_PIPCACHE}:/cache/pip
+x-volumes-scripts: &volumes-scripts
+  ${HOST_SCRIPTS_DIR}:/scripts
+
+services:
+  cache-builder:
+    container_name: cache-builder
+    image: nmarvie/cache-builder:${BUILD_TAG}
+    volumes:
+      - ${HOST_CONF_BUILD}/dpkg-nodoc:/etc/dpkg/dpkg.cfg.d/01_nodoc
+      - ${HOST_CONF_BUILD}/gemrc:/root/.gemrc
+
+      - ${HOST_CONF_ARVADOS}/arvados-api-database.yml:/etc/arvados/database.yml
+
+      - *volumes-arvados-config
+      - *volumes-cache-gem
+      - *volumes-cache-npm
+      - *volumes-arvados-src
+      - *volumes-scripts
+    environment:
+      NPM_CONFIG_PREFIX: /cache/npm
+      npm_config_cache_min: ${NPM_CACHE_MIN}
+    command: /scripts/ruby/build_gems_cache

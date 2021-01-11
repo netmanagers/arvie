@@ -1,0 +1,34 @@
+#!/bin/bash -x
+# Check arvados/tools/arvbox/lib/arvbox/docker/service/workbench/run-service
+
+PORT=$1
+
+export GEM_HOME=/cache/gem
+export NPM_CONFIG_PREFIX=/cache/npm
+
+echo "Run bundle install if required"
+bundle check || bundle install
+
+echo "Waiting for the database server to be ready"
+# Wait for the database to be available
+echo "Checking database availability"
+for t in {1..200}; do
+  if pg_isready -h database; then
+    echo "Database server ready"
+    break
+  fi
+  echo "Database not ready..."
+  sleep 1
+done
+while ! test -f /arvados/flags/api_database_setup ; do
+  echo "Waiting for Arvados database to be populated"
+  sleep 1
+done
+
+# Tried to add this to the Dockerfile, but the npm assets need the /etc/arvados/config.yml file in place
+echo "Building and precompiling assets"
+RAILS_GROUPS=assets bundle exec rake npm:install && \
+RAILS_GROUPS=assets bundle exec rake assets:precompile
+
+echo "Starting the workbench server"
+bundle exec rails server -b 0.0.0.0 -p ${PORT}

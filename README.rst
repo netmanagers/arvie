@@ -4,6 +4,75 @@ Arvie, an Arvados' docker-compose runner & docker images' builder
 This repo holds scripts and files to build slim docker images for
 Arvados components and run them using docker-compose.
 
+TL;DR: It works! :D
+-----
+
+The rest of this documentation needs update, that will be my next step. In the meantime, you can get arvie up and running with these steps:
+
+1. download the repo and cd to it
+2. create an environment
+
+.. code-block:: bash
+   ./arvie env
+
+3. populate the gems/pips/npm caches (you'll need this only the 1st time, or when rebuilding them), it will take some time
+
+.. code-block:: bash
+   ./arvie prepare    # for your 1st time
+   ./arvie prepare -c # when re-building
+
+4. build arvie images locally. If you don't want to build them locally, you can download them from dockerhub (just skip this step, jump to next
+   step, and images will be downloaded. Note that dockerhub is imposing limits, so this might take a while.
+
+.. code-block:: bash
+   ./arvie build
+
+5. run arvie
+
+.. code-block:: bash
+    ./arvie up
+
+6. Add an entry in ``/etc/hosts`` to get DNS entries for your cluster:
+
+.. code-block:: bash
+   export ARVIE_CLUSTER_NAME=arvie
+   export DOMAIN=arv.local
+   echo \
+       127.0.0.2 \
+       api.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       keep.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       keep0.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       collections.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       download.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       ws.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       workbench.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       workbench2.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       ${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       | sudo tee --append /etc/hosts
+
+7. Add the CA certificate to your browser: this will prevent security errors when accessing Arvados services with your web browser.
+
+   * Go to the certificate manager in your browser.
+   In Chrome, this can be found under “Settings → Advanced → Manage Certificates” or by entering chrome://settings/certificates in the URL bar.
+   In Firefox, this can be found under “Preferences → Privacy & Security” or entering about:preferences#privacy in the URL bar and then choosing “View Certificates…”.
+   Select the “Authorities” tab, then press the “Import” button. Choose `arvie.arv.local-CA.crt`
+
+   The certificate will be added under “__ARVIE__”.
+
+8. Enter the URL `https://workbench.arvie.arv.local:8443`_ in your browser.
+
+9. Log in to your cluster (initial user/pass: alice/alice)
+
+10. If you want to run an arvados' shell run
+
+.. code-block:: bash
+   docker exec -ti shell /bin/bash
+
+11. Stop Arvie with ``./arvie down``
+
+Data will be persisted under the ``./local/arvie`` subdir so, if you start arvie again, your work will be
+available again.
+
 General notes
 -------------
 
@@ -43,6 +112,30 @@ Mostly because I wanted to play with the tools involved, but also, because I thi
   k8s setup. (TODO)
 * Other usages? Ie., learn new tools/things? :smile:
 
+Repository layout
+-----------------
+
+To make it easier to use arvie or modify/customize it, things are organized in different subdirs:
+
+* arvados: contains a copy of Arvados' repository. It is downloaded and populated when you run
+  ``arvie prepare``. It's a git-submodule of Arvie, so you can either manage it as such or just
+  change to it and manage independently. This directory is usually mounted in the running instances
+  under ``/usr/src/arvados``.
+* cache: holds gems, pips, npms and go packages that are used in the Rails apps or in various build
+  stages, to speed things.
+* configs: the configuration files for Arvados, Nginx, Postgresql are stored here. They're mounted
+  as volumes in the instances, so you can modify them, restart/reload the process and change will
+  be reflected in your cluster.
+* docker-compose: different ``docker-compose.yml`` files that are used to build images or launch
+  the cluster.
+* scripts: start scripts that are used when starting the Arvados' components.
+* commands: commands that are used to manage Arvie. These files are read by the ``arvie`` command,
+  and presented to you as a sub-command. Run ``arvie`` with no parameters, and you'll get a list
+  of the available commands. If you want to add another subcommand for your work, just drop a file
+  in this directory and it will be automatically available as an ``arvie`` subcommand. Check the
+  files for examples on how to write/organize them.
+* dockerfiles: these are the Dockerfiles used to build the different Arvados' images.
+
 Usage
 -----
 
@@ -55,72 +148,85 @@ The default subdir is *arvados*.
 
 .. code-block:: bash
 
-   $ git clone https://github.com/netmanagers/arvie.git
+   git clone https://github.com/netmanagers/arvie.git
 
-2. Run the ``prepare`` script, to get Arvados' subtree and generate a pair of SSL keys for postgres.
-   (As postgres needs the keys with certain permissions and ownership, the script will ask you for
-   your sudo password):
+2. Check the variables in the ``.env`` file, which will be used in a few places. Quite possible you don't
+   need to change them. If unsure, leave them as they are. Default configuration work creating everything
+   under Arvie's own directory.
 
-.. code-block:: bash
+3. Run ``./arvie up``. The first time you run it, it will first run the ``prepare`` subcommand, to 
+   populate the Arvados directory, create SSL certs for Postgresql and populate the ``cache`` subdirs.
+   As postgres needs the keys with certain permissions and ownership, the script will ask you for
+   your sudo password.
 
-   $ ./prepare
+   First run will take some time to start, as ``prepare`` will download and build a few gems that Arvadosi
+   needs and then download the docker images from DockerHub.
 
-if you want to update the Arvados repo, just run
+   This is usually ~10 minutes (you'll see the build process on your screen).
 
-.. code-block:: bash
-
-   $ git submodule update --checkout
-
-3. Check the variables in the ``.env`` file, which will be used in a few places. Quite possible you don't
-   need to change them.
-
-4. (Optional): If you want to build your own images, run the ``builder`` script (or skip to just pull the
-   publicly available Arvie images):
+4. Add an entry in ``/etc/hosts`` to get DNS entries for your cluster:
 
 .. code-block:: bash
 
-   $ ./builder keepstore ws
+   export ARVIE_CLUSTER_NAME=arvie
+   export DOMAIN=arv.local
+   echo \
+       127.0.0.2 \
+       api.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       keep.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       keep0.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       collections.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       download.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       ws.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       workbench.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       workbench2.${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       ${ARVIE_CLUSTER_NAME}.${DOMAIN} \
+       | sudo tee --append /etc/hosts
 
-to build those two images locally, from the current Arvados tree in your working environment.
+5. Add the CA certificate to your browser: this will prevent security errors when accessing Arvados services with your web browser.
+
+   * Go to the certificate manager in your browser.
+   In Chrome, this can be found under “Settings → Advanced → Manage Certificates” or by entering chrome://settings/certificates in the URL bar.
+   In Firefox, this can be found under “Preferences → Privacy & Security” or entering about:preferences#privacy in the URL bar and then choosing “View Certificates…”.
+   Select the “Authorities” tab, then press the “Import” button. Choose `arvie.arv.local-CA.crt`
+
+   The certificate will be added under “__ARVIE__”.
+
+6. Enter the URL `https://workbench.arvie.arv.local:8443`_ in your browser.
+
+7. Log in to your cluster (initial user/pass: alice/alice)
+
+8. If you want to run an arvados' shell run
+
+.. code-block:: bash
+   docker exec -ti shell /bin/bash
+
+9. Stop Arvie with ``./arvie down``
+
+Data will be persisted under the ``./local/arvie`` subdir so, if you start arvie again, your work will be
+available again.
+
+Subcommands examples
+--------------------
+
+Build
+^^^^^
+
+If you want to build a local copy of any (or all) of Arvados' components, you can do it with the ``build``
+subcommand:
+
+.. code-block:: bash
+
+   $ ./arvie build keepstore ws
+
+to build those two images locally from the current Arvados tree in your working environment.
 If no image/s is/are given, all the images will be built again. Run:
 
 .. code-block:: bash
 
-   $ ./builder -h
+   $ ./arvie build -h
 
 to get some help.
-
-5. Add an entry in ``/etc/hosts`` to get DNS entries for your cluster:
-
-.. code-block:: bash
-
-   $ echo \
-       127.0.0.2 \
-       api \
-       keep \
-       keep0 \
-       collections \
-       download \
-       ws \
-       workbench \
-       workbench2 \
-       api.vwxyz.arv.local \
-       keep.vwxyz.arv.local \
-       keep0.vwxyz.arv.local \
-       collections.vwxyz.arv.local \
-       download.vwxyz.arv.local \
-       ws.vwxyz.arv.local \
-       workbench.vwxyz.arv.local \
-       workbench2.vwxyz.arv.local \
-       vwxyz.arv.local \
-       >> /etc/hosts
-
-5. Run ``docker-compose up`` to spin up the cluster.
-6. Point your browser to `https://workbench.vwxyz.arv.local:8443/`_ and login to
-   your cluster (initial user/pass: alice/alice)
-
-Status
-------
 
 So far, the scripts can build docker images for the following components
 
@@ -141,7 +247,15 @@ So far, the scripts can build docker images for the following components
    nmarvie/client                  latest              cd95446a2bfa        7 days ago          85.7MB
    nmarvie/server                  latest              808e8218a12c        7 days ago          111MB
 
-And running `docker-compose up` we get:
+Compose
+^^^^^^^
+
+As a convenience, there's a ``compose`` subcommand, which is used to pass commands to ``docker-compose``.
+
+Whatever you pass a parameters to the command ``./arvie compose`` will be passed verbatim to ``docker-compose``
+with the ``docker-compose/base.yml`` config file.
+
+Running ``./arvie up`` is equivalent to ``./arvie compose up`` and will start the cluster:
 
 .. code-block:: bash
 
@@ -161,6 +275,16 @@ And running `docker-compose up` we get:
                                                           shell        irb                              Up
                                                           websocket    ./executable ws                  Up
                                                           workbench    /scripts/ruby/app_start 8002     Up
+
+You can validate your ``docker-compose`` configuration with
+
+.. code-block:: bash
+
+   $ ./arvie compose config
+   $ ./arvie compose --file docker-compose/build.yml config
+
+in this last example, remember that ``docker-compose/base.yml`` is used by default with the ``compose``
+subcommand, so both files will be merged, by ``docker-compose``'s rules.
 
 TODO
 ----

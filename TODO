@@ -4,3 +4,44 @@
 * workbench & api pids should be placed somewhere else or cleaned properly on teardown
 * compute and shell images should NOT use packages, as they're needlessly big
 * prepare should properly setup nginx's geo.conf
+
+
+root@8f8538a1d447:/usr/src/arvados/services/api# cat config/initializers/opentracing.rb
+require 'rack/tracer'
+require 'rails/tracer'
+require 'rails/instrumentation'
+OpenTracing.global_tracer = Jaeger::Client.build(service_name: 'railsapi', host: '172.20.0.2',
+                                                 port: 6831,
+                                                 sampler: Jaeger::Samplers::Const.new(true),
+                                                   injectors: {
+    OpenTracing::FORMAT_RACK => [Jaeger::Injectors::TraceContextRackCodec]
+  },
+  extractors: {
+    OpenTracing::FORMAT_RACK => [Jaeger::Extractors::TraceContextRackCodec]
+  }
+                                                )
+# from https://github.com/signalfx/ruby-rails-instrumentation
+Rails::Instrumentation.instrument
+
+
+
+
+ok.. veo cosas para mejorara en argie...
+3:46
+que le pasa al directorio arvados? porque termino con  "HEAD detached at <commit"
+3:48
+por ejemplo agregue a .env esto:
+## JAEGER configuration from environment
+JAEGER_AGENT_HOST=arvie_jaeger_1
+JAEGER_AGENT_PORT=6831
+JAEGER_SAMPLER_TYPE=const
+JAEGER_SAMPLER_PARAM=1
+3. Check the variables in the ``.env`` file, which will be used in a few places. Quite possible you don't
+   need to change them.
+.... pero no explica si tengo que rebuildiear  o no
+3:50
+HIce cambios al codigo de controller
+3:50
+y no los esta tomando pero ni idea si re-compilo y si tiene las variables de entorno  o no
+3:50
+charlamos cuando puedas

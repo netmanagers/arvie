@@ -1,0 +1,21 @@
+#!/bin/bash -x
+
+# This script is used to build the gems cache for the ruby apps.
+# It's run from the instances launched with the docker-compose-cache-builder.yml file
+
+export GEM_HOME=/cache/gem
+export NPM_CONFIG_PREFIX=/cache/npm
+
+cd /arvados
+for GF in apps/workbench services/api sdk/cli; do
+  (
+    cd "${GF}" || exit 1
+    bundle install --retry=20 --verbose
+    if [ "${GF}" == "apps/workbench" ]; then
+      RAILS_ENV=production RAILS_GROUPS=assets bundle exec rake npm:install
+      RAILS_ENV=production RAILS_GROUPS=assets bundle exec rake assets:precompile
+    fi
+  )
+done
+# We use the cache also for the shell container
+gem install arvados-cli

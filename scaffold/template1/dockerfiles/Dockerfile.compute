@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:experimental
+
+# Initial crude image using packages, following
+# https://doc.arvados.org/v1.4/install/install-compute-node.html
+
+ARG COMPUTE_IMAGE
+FROM ${COMPUTE_IMAGE} AS builder
+
+ENV DEBIAN_FRONTEND noninteractive
+
+ENV ARVADOS_API_HOST ${ARVADOS_API_HOST}
+ENV ARVADOS_API_TOKEN ${ARVADOS_API_TOKEN}
+ENV ARVADOS_API_HOST_INSECURE true
+
+# Avoid unnecessary files when installing packages
+COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
+COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lib-apt \
+    apt-get update \
+ && apt-get --no-install-recommends install --yes gnupg \
+ && /usr/bin/apt-key adv --keyserver keyserver.ubuntu.com --recv 1078ECD7 \
+ && echo "deb http://apt.arvados.org/buster buster main" | tee /etc/apt/sources.list.d/arvados.list \
+ && apt-get update \
+ && apt-get install --yes \
+                    --no-install-recommends \
+                    libfuse2 \
+                    python3-arvados-fuse \
+                    arvados-docker-cleaner \
+ && echo -n '#!/bin/sh\nexec /usr/bin/crunch-run -container-enable-networking=default -container-network-mode=host $@' |tee /usr/local/bin/crunch-run.sh \
+ && chmod 755 /usr/local/bin/crunch-run.sh \
+
+ && apt-get autoremove --purge --yes \
+ && rm -rf /lib/systemd/system/systemd*udev* \
+           /lib/systemd/system/getty.target \
+ && (find / ! -path "/{proc,sys,dev}" -name "*.pyc"; \
+     find / ! -path "/{proc,sys,dev}" -name "__pycache__"; \
+     find /var/log -type f) | \
+    grep -v ^/proc | xargs rm -rf \
+    # Also obscure any `getty` binaries https://github.com/moby/moby/issues/4040#issuecomment-339022455
+ && cp /bin/true /sbin/agetty
+COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
+COPY --from=nmarvie/server /app/arvados-server /usr/local/bin/crunch-run
+
