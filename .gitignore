@@ -39,4 +39,4 @@ tmp
 configs/ssl
 configs/example
 example
-scaffold/*/configs/build/LAST_BUILD_INFO
+LAST_BUILD_INFO

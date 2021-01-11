@@ -110,13 +110,10 @@ services:
       dockerfile: ${HOST_CONF_DOCKERFILES}/Dockerfile.goapp.crunch-dispatch-local
       args:
         <<: *build_tag
+        COMPUTE_IMAGE: ${COMPUTE_IMAGE}
         APP_DIR: services
         APP_NAME: crunch-dispatch-local
   # crunch-dispatch-slurm:
-  # crunch-run:
-  # crunchstat:
-  # dockercleaner:
-  # fuse:
 
   ### HEALTH
   health:
@@ -177,6 +174,7 @@ services:
       args:
         <<: *build_tag
         RUBY_IMAGE: ${RUBY_IMAGE}
+        COMPUTE_IMAGE: ${COMPUTE_IMAGE}
         GEM_HOME: /cache/gem
         NPM_CONFIG_PREFIX: /cache/npm
         PIPCACHE: /cache/pip

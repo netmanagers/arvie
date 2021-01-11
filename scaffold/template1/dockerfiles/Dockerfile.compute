@@ -8,6 +8,10 @@ FROM ${COMPUTE_IMAGE} AS builder
 
 ENV DEBIAN_FRONTEND noninteractive
 
+ENV ARVADOS_API_HOST ${ARVADOS_API_HOST}
+ENV ARVADOS_API_TOKEN ${ARVADOS_API_TOKEN}
+ENV ARVADOS_API_HOST_INSECURE true
+
 # Avoid unnecessary files when installing packages
 COPY configs/build/dpkg-nodoc /etc/dpkg/dpkg.cfg.d/01_nodoc
 COPY configs/build/apt-no-recommends /etc/apt/apt.conf.d/99synaptic
@@ -21,10 +25,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
  && apt-get update \
  && apt-get install --yes \
                     --no-install-recommends \
+                    libfuse2 \
                     python3-arvados-fuse \
-                    crunch-run \
                     arvados-docker-cleaner \
- && echo 'exec /usr/bin/crunch-run -container-enable-networking=default -container-network-mode=host ${@}' |tee /usr/local/bin/crunch-run.sh \
+ && echo -n '#!/bin/sh\nexec /usr/bin/crunch-run -container-enable-networking=default -container-network-mode=host $@' |tee /usr/local/bin/crunch-run.sh \
  && chmod 755 /usr/local/bin/crunch-run.sh \
 
  && apt-get autoremove --purge --yes \
@@ -37,3 +41,5 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
     # Also obscure any `getty` binaries https://github.com/moby/moby/issues/4040#issuecomment-339022455
  && cp /bin/true /sbin/agetty
 COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
+COPY --from=nmarvie/server /app/arvados-server /usr/local/bin/crunch-run
+

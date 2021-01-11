@@ -1,0 +1,43 @@
+#!/bin/bash -x
+# Taken from https://github.com/arvados/arvados/blob/master/tools/arvbox/lib/arvbox/docker/service/docker/run
+
+exec 2>&1
+
+# Ensure that all nodes in /dev/mapper correspond to mapped devices currently loaded by the device-mapper kernel driver
+dmsetup mknodes
+
+: {LOG:=stdio}
+
+# Now, close extraneous file descriptors.
+pushd /proc/self/fd >/dev/null
+for FD in *
+do
+	case "$FD" in
+	# Keep stdin/stdout/stderr
+	[012])
+		;;
+	# Nuke everything else
+	*)
+		eval exec "$FD>&-"
+		;;
+	esac
+done
+popd >/dev/null
+
+# If a pidfile is still around (for example after a container restart),
+# delete it so that docker can start.
+rm -rf /var/run/docker.pid
+
+read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
+trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
+
+mkdir -p /etc/docker
+# Prefer overlay2
+echo '{"storage-driver": "overlay2"}' > /etc/docker/daemon.json
+
+if ! dockerd ; then
+    # Oops overlay2 didn't work, let docker choose a default.
+    echo "Oops overlay2 didn't work, let docker choose a default."
+    echo '{}' > /etc/docker/daemon.json
+    dockerd
+fi

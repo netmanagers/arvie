@@ -5,8 +5,8 @@
 
 # https://blog.carbonfive.com/2015/03/17/docker-rails-docker-compose-together-in-your-development-workflow/
 
-ARG RUBY_IMAGE
-FROM ${RUBY_IMAGE} AS builder
+ARG COMPUTE_IMAGE
+FROM ${COMPUTE_IMAGE} AS final
 # GEMS
 # https://bundler.io/v2.0/guides/bundler_docker_guide.html
 ARG GEM_HOME=/cache/gem
@@ -39,33 +39,45 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
     apt-get update \
  && apt-get --no-install-recommends install --yes gnupg \
  && /usr/bin/apt-key adv --keyserver keyserver.ubuntu.com --recv 1078ECD7 \
- && echo "deb http://apt.arvados.org/ buster main" | tee /etc/apt/sources.list.d/arvados.list \
+ && echo "deb http://apt.arvados.org/buster buster main" | tee /etc/apt/sources.list.d/arvados.list \
  && apt-get update \
  && apt-get install --yes \
                     --no-install-recommends \
                     arvados-client \
                     arvados-src \
-                    libpam-arvados-go \
-                    python3-arvados-fuse \
-                    python3-arvados-python-client \
-                    python3-arvados-cwl-runner \
-                    shellinabox \
                     bundler \
+                    ca-certificates \
                     curl \
+                    dmsetup \
+                    dumb-init \
                     g++ \
                     gcc \
                     git \
+                    iptables \
+                    jq \
                     libcurl4 \
                     libcurl4-gnutls-dev \
+                    libdevmapper1.02.1 \
+                    libfuse2 \
+                    libpam-arvados-go \
                     libpq-dev \
+                    libruby \
                     libxml2 \
                     libxml2-dev \
                     make \
                     npm \
                     postgresql-client \
                     python-dev \
+                    python3-arvados-cwl-runner \
+                    python3-arvados-fuse \
+                    python3-arvados-python-client \
+                    ruby \
                     ruby-dev \
+                    shellinabox \
+                    util-linux \
                     zlib1g-dev \
+ && ln -s /usr/bin/ruby2.5 /usr/local/bin/ruby \
+ && ln -s /usr/lib/x86_64-linux-gnu/libruby-2.5.so.2.5.5 /usr/local/lib/libruby.so.2.5 \
  && gem install arvados-cli \
  && apt-get purge --yes \
                     bundler \
@@ -93,4 +105,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=cache-apt \
     grep -v ^/proc | xargs rm -rf \
     # Also obscure any `getty` binaries https://github.com/moby/moby/issues/4040#issuecomment-339022455
  && cp /bin/true /sbin/agetty
+COPY --from=docker:latest /usr/local/bin/dockerd /usr/local/bin/dockerd
+COPY --from=docker:latest /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker:latest /usr/local/bin/runc /usr/local/bin/runc
+COPY --from=docker:latest /usr/local/bin/containerd /usr/local/bin/containerd
+COPY --from=docker:latest /usr/local/bin/containerd-shim /usr/local/bin/containerd-shim
+COPY --from=docker:latest /usr/local/bin/containerd-shim-runc-v2 /usr/local/bin/containerd-shim-runc-v2
 COPY configs/build/LAST_BUILD_INFO /BUILD_INFO
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]

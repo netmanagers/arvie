@@ -19,10 +19,10 @@ x-volumes-flags: &volumes-flags
   ${ARVBOX_FLAGS}:/arvados/flags
 x-volumes-scripts: &volumes-scripts
   ${HOST_SCRIPTS_DIR}:/scripts
-x-volumes-docker-sock: &volumes-docker-sock
-  /var/run/docker.sock:/var/run/docker.sock
-x-volumes-docker-bin: &volumes-docker-bin
-  /usr/bin/docker:/usr/bin/docker
+x-volumes-dockerd-var-lib-dispatcher: &volumes-dockerd-var-lib-dispatcher
+  /tmp/docker-dispatcher:/var/lib/docker
+x-volumes-dockerd-var-lib-shell: &volumes-dockerd-var-lib-shell
+  /tmp/docker-shell:/var/lib/docker
 
 # SERVICES
 services:
@@ -169,20 +169,26 @@ services:
   #     - *volumes-arvados-config
   crunch-dispatch-local:
     container_name: dispatcher
-    # https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker
-    # TL;DR: no, it's not. you better run siblings
     image: nmarvie/crunch-dispatch-local:${BUILD_TAG}
-    # command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run'
-    command: '-poll-interval=1 -crunch-run-command=/usr/local/bin/crunch-run.sh'
+    # https://stackoverflow.com/a/14612605
+    # command: ['/usr/sbin/dockerd', '&', '/usr/bin/crunch-dispatch-local', '-poll-interval=1', '-crunch-run-command=/usr/local/bin/crunch-run.sh']
+    command: /scripts/arvados/crunch-dispatch-local
+
+    # using systemd, to use it a  dind compute image
+    # https://hub.docker.com/r/jrei/systemd-debian
+    # --tmpfs /tmp --tmpfs /run --tmpfs /run/lock -v /sys/fs/cgroup:/sys/fs/cgroup:ro
     environment:
       ARVADOS_API_HOST: "${CLUSTER}.${DOMAIN}:8000"
       ARVADOS_API_TOKEN: systemroottokenmushaveatleast32characters
       ARVADOS_API_HOST_INSECURE: 1
     tty: true   # Enables debugging capabilities when attached to this container.
+    privileged: true
+    # init: true
     volumes:
       - *volumes-arvados-config
-      # - *volumes-docker-sock
-      # - *volumes-docker-bin
+      - *volumes-dockerd-var-lib-dispatcher
+      - *volumes-scripts
+
   # FIXME! If we want to use the slurm dispatcher
   # compute0:
   #   container_name: compute0
@@ -260,13 +266,14 @@ services:
     tty: true   # Enables debugging capabilities when attached to this container.
     # ports:
     #   - 2222:22
+    privileged: true
     volumes:
       - *volumes-arvados-src
       - *volumes-cache-gem
       - *volumes-cache-npm
-      # FIXME! arvados-cwl-runner (and perhaps other tools need docker?)
-      - *volumes-docker-sock
-      - *volumes-docker-bin
+      - *volumes-scripts
+      - *volumes-dockerd-var-lib-shell
     environment:
       NPM_CONFIG_PREFIX: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}
+    command: /scripts/arvados/shell

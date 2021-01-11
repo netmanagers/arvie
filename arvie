@@ -350,6 +350,8 @@ create_ssl_certs() {
       -out ${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.crt \
       -keyout ${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.key \
       -days 365
+    # So we can add it to the browser
+    cp ${HOST_CONF_DIR}/ssl/${ARVIE_CLUSTER_NAME}.${DOMAIN}-CA.crt .
   fi
 
   # Create the certs for the different VHosts and PG
