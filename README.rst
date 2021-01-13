@@ -7,6 +7,7 @@ Arvados components and run them using docker-compose.
 TL;DR: It works! :D
 -----
 
+Arvados seems to fail if you're using **cgroup v2**, so make sure you're using 
 The rest of this documentation needs update, that will be my next step. In the meantime, you can get arvie up and running with these steps:
 
 1. download the repo and cd to it

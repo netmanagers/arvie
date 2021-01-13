@@ -159,14 +159,6 @@ services:
       - controller
       - api
 
-  ### GIT-HTTPD
-  # git-httpd:
-  #   container_name: git-httpd
-  #   image: nmarvie/git-httpd:${BUILD_TAG}
-  #   ports:
-  #     - 9001:9001
-  #   volumes:
-  #     - *volumes-arvados-config
   crunch-dispatch-local:
     container_name: dispatcher
     image: nmarvie/crunch-dispatch-local:${BUILD_TAG}
@@ -188,32 +180,6 @@ services:
       - *volumes-arvados-config
       - *volumes-dockerd-var-lib-dispatcher
       - *volumes-scripts
-
-  # FIXME! If we want to use the slurm dispatcher
-  # compute0:
-  #   container_name: compute0
-  #   image: nmarvie/compute:${BUILD_TAG}
-  #   tty: true   # Enables debugging capabilities when attached to this container.
-  #   # volumes:
-  #   #   - *volumes-docker-sock
-  #   #   - *volumes-docker-bin
-  # compute1:
-  #   container_name: compute1
-  #   image: nmarvie/compute:${BUILD_TAG}
-  #   tty: true   # Enables debugging capabilities when attached to this container.
-  #   # volumes:
-  #   #   - *volumes-docker-sock
-  #   #   - *volumes-docker-bin
-  # health:
-  #   container_name: health
-  #   image: nmarvie/health:${BUILD_TAG}
-  #   volumes:
-  #     - *volumes-arvados-config
-  # keep-balance:
-  #   container_name: keep-balance
-  #   image: nmarvie/keep-balance:${BUILD_TAG}
-  #   volumes:
-  #     - *volumes-arvados-config
 
   ### KEEPPROXY (KEEP)
   keepproxy:
@@ -273,6 +239,7 @@ services:
       - *volumes-cache-npm
       - *volumes-scripts
       - *volumes-dockerd-var-lib-shell
+      - ${HOST_CONF_DIR}/ssl/${CLUSTER}.${DOMAIN}-CA.crt:/usr/local/share/ca-certificates/${CLUSTER}.${DOMAIN}-CA.crt:ro
     environment:
       NPM_CONFIG_PREFIX: /cache/npm
       npm_config_cache_min: ${NPM_CACHE_MIN}

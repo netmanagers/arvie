@@ -3,6 +3,9 @@
 
 exec 2>&1
 
+# Let's refresh the CA certificates
+update-ca-certificates
+
 # Ensure that all nodes in /dev/mapper correspond to mapped devices currently loaded by the device-mapper kernel driver
 dmsetup mknodes
 
