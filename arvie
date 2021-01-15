@@ -5,6 +5,22 @@ set -euo pipefail
 COMMAND="$(basename "${BASH_SOURCE}")"
 ARVIE_PATH="$( cd "$(dirname "${BASH_SOURCE}")" >/dev/null 2>&1 ; pwd -P )"
 
+cgroupsv2_pre_flight_check() {
+  # TL;DR: Arvados does not support cgroupsv2 yet
+  # https://dev.arvados.org/issues/17244
+  CGROUPS_VERSION="1"
+  if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
+    echo "Your system is using CGROUPSv2."
+    echo "Arvados does not support it yet, so it will be able to start, but won't be able to run workflows."
+    echo
+    echo "See"
+    echo "  https://dev.arvados.org/issues/17244"
+    echo "  https://docs.docker.com/config/containers/runmetrics/"
+    echo "to find out how to modify your OS to run with CGROUPSv1"
+    CGROUPS_VERSION="2"
+  fi
+}
+
 current_env() {
   echo "Environment variables:"
   echo "  * ARVIE_CLUSTER_ENV:      Arvie's env dir to use as part of various dirs to create"
@@ -442,6 +458,8 @@ compose() {
 ########### MAIN SECTION ##################
 # Parse the arguments
 arguments ${@}
+
+cgroupsv2_pre_flight_check
 
 case "${SUB_COMMAND}" in
   build)
