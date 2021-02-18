@@ -1,0 +1,16 @@
+---
+# This is the controller debugging docker-compose.yml file.
+# stacked on top of base.yml and build.yml
+ 
+version: '3.8'
+
+services:
+  controller:
+    # we override the name of the image so compose doesn't get confused and
+    # uses an old image that was not meant for debugging
+    image: nmarvie/controller_debug:${BUILD_TAG}
+     # Overrides default command so things don't shut down after the process ends.
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    build:
+      target: builder
+

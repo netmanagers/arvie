@@ -336,12 +336,10 @@ create_env() {
                 s#__ARVIE_BASE_DIR__#${ARVIE_PATH}#g"
 
     # Do the job
-    echo "Creating config directory for ${ARVIE_CLUSTER_NAME} under ${ARVIE_CONFIG}"
-    mkdir -pv "${ARVIE_CONFIG}"
     echo "Creating persistent storage directory for ${ARVIE_CLUSTER_NAME} under ${ARVIE_DATA}"
     mkdir -pv "${ARVIE_DATA}"
     echo "Cloning template ${SCAFFOLD} to ${ARVIE_CONFIG}"
-    cp -r "${ARVIE_PATH}/scaffold/${SCAFFOLD}"/* "${ARVIE_CONFIG}/"
+    cp -r "${ARVIE_PATH}/scaffold/${SCAFFOLD}" "${ARVIE_CONFIG}"
 
     echo "Replacing vars in ${ARVIE_CLUSTER_ENV}"
     find "${ARVIE_CONFIG}" -type f -exec sed -i "${SED}" {} \;
@@ -477,6 +475,8 @@ case "${SUB_COMMAND}" in
     ;;
   env)
     create_env
+    load_compose_env
+    create_ssl_certs
     ;;
   prepare)
     load_compose_env
@@ -484,7 +484,6 @@ case "${SUB_COMMAND}" in
     ;;
   up)
     load_compose_env
-    create_ssl_certs
     compose up ${COMMAND_PARAMETERS}
     ;;
   down)

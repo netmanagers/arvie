@@ -1,0 +1,14 @@
+{
+    "name": "arvadostest",
+    "dockerComposeFile": [
+		"compose/base.yml",
+		"compose/build.yml",
+		"compose/cache.yml",
+		"compose/debug-controller.yml"
+		],
+	"service": "controller",
+	"extensions": [
+		"golang.go"
+	],
+    "workspaceFolder": "/usr/src/arvados/git.arvados.org/arvados.git"
+}
